@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>StucoVault</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0a0f1e;
+  --navy2:#111827;
+  --navy3:#1a2236;
+  --navy4:#243049;
+  --slate:#2e3f5c;
+  --gold:#c9a84c;
+  --gold2:#e8c46a;
+  --gold3:#f5d98b;
+  --cream:#f4efe6;
+  --white:#ffffff;
+  --red:#e05252;
+  --green:#3ecf8e;
+  --blue:#4f9cf9;
+  --orange:#f5a623;
+  --purple:#a78bfa;
+  --pink:#f472b6;
+  --teal:#2dd4bf;
+  --rose:#fb7185;
+  --indigo:#818cf8;
+  --amber:#fbbf24;
+  --lime:#a3e635;
+  --cyan:#22d3ee;
+  --muted:#6b7fa3;
+  --border:rgba(201,168,76,0.18);
+  --card:rgba(26,34,54,0.9);
+  --radius:12px;
+  --radius-lg:18px;
+  --trans:all 0.22s cubic-bezier(.4,0,.2,1);
+}
+html,body{height:100%;background:var(--navy);color:var(--white);font-family:'Syne',sans-serif}
+body{display:flex;flex-direction:column}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--navy2)}
+::-webkit-scrollbar-thumb{background:var(--slate);border-radius:99px}
+
+/* ── NOISE TEXTURE overlay ── */
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");opacity:.4;pointer-events:none;z-index:0}
+
+/* ──────────── LOGIN ──────────── */
+#login-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:100;background:var(--navy)}
+.login-glow{position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(201,168,76,.15) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
+.login-box{position:relative;z-index:1;width:400px;padding:48px 44px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);backdrop-filter:blur(20px)}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:36px}
+.login-logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--gold),var(--gold3));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.login-logo span{font-size:22px;font-weight:800;letter-spacing:-.5px}
+.login-logo span em{font-style:normal;color:var(--gold)}
+.login-title{font-size:26px;font-weight:800;line-height:1.1;margin-bottom:6px}
+.login-sub{font-size:13px;color:var(--muted);margin-bottom:32px}
+.field-group{margin-bottom:18px}
+.field-group label{display:block;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.field-group input,.field-group select{width:100%;padding:12px 14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--white);font-family:'Syne',sans-serif;font-size:14px;transition:var(--trans);outline:none}
+.field-group input:focus,.field-group select:focus{border-color:var(--gold);background:rgba(201,168,76,.06)}
+.field-group select option{background:var(--navy2)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border:none;border-radius:8px;font-family:'Syne',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:var(--trans);text-decoration:none;white-space:nowrap}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold2));color:var(--navy);width:100%}
+.btn-gold:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+.btn-red{background:rgba(224,82,82,.15);border:1px solid rgba(224,82,82,.3);color:var(--red)}
+.btn-red:hover{background:rgba(224,82,82,.25)}
+.btn-green{background:rgba(62,207,142,.15);border:1px solid rgba(62,207,142,.3);color:var(--green)}
+.btn-green:hover{background:rgba(62,207,142,.25)}
+.btn-sm{padding:7px 13px;font-size:12px;border-radius:6px}
+.login-demo{margin-top:24px;border-top:1px solid var(--border);padding-top:20px}
+.login-demo p{font-size:11px;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em}
+.demo-users{display:flex;flex-direction:column;gap:6px}
+.demo-user{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:6px;cursor:pointer;transition:var(--trans)}
+.demo-user:hover{border-color:var(--gold);background:rgba(201,168,76,.06)}
+.demo-user-info{font-size:12px;font-weight:600}
+.demo-user-role{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace}
+.error-msg{color:var(--red);font-size:12px;margin-top:10px;display:none}
+
+/* ──────────── APP SHELL ──────────── */
+#app{display:none;height:100vh;flex-direction:row}
+.sidebar{width:230px;min-width:230px;background:var(--navy2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:relative;z-index:10}
+.sidebar-logo{padding:22px 20px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sidebar-logo-icon{width:30px;height:30px;background:linear-gradient(135deg,var(--gold),var(--gold3));border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.sidebar-logo span{font-size:17px;font-weight:800;letter-spacing:-.3px}
+.sidebar-logo span em{font-style:normal;color:var(--gold)}
+.sidebar-user{padding:16px 20px;border-bottom:1px solid var(--border)}
+.sidebar-user-name{font-size:14px;font-weight:700}
+.sidebar-user-role{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:2px}
+.sidebar-badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:600;margin-top:5px}
+.badge-treasurer{background:rgba(201,168,76,.2);color:var(--gold)}
+.badge-supervisor{background:rgba(79,156,249,.2);color:var(--blue)}
+.badge-member{background:rgba(62,207,142,.2);color:var(--green)}
+nav{flex:1;padding:12px 10px;overflow-y:auto}
+.nav-section{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:10px 10px 6px;margin-top:6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;transition:var(--trans);font-size:13px;font-weight:500;color:var(--muted);position:relative}
+.nav-item:hover{background:rgba(255,255,255,.05);color:var(--white)}
+.nav-item.active{background:rgba(201,168,76,.12);color:var(--gold)}
+.nav-item.active::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:3px;background:var(--gold);border-radius:99px}
+.nav-icon{font-size:16px;width:20px;text-align:center}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px}
+.sidebar-bottom{padding:14px 10px;border-top:1px solid var(--border)}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{padding:18px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(10,15,30,.5);backdrop-filter:blur(10px)}
+.page-title{font-size:20px;font-weight:800}
+.page-subtitle{font-size:12px;color:var(--muted);margin-top:2px}
+.topbar-actions{display:flex;gap:10px}
+.content{flex:1;overflow-y:auto;padding:28px}
+
+/* ──────────── CARDS & GRIDS ──────────── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden;transition:var(--trans)}
+.stat-card:hover{transform:translateY(-2px);border-color:rgba(201,168,76,.35)}
+.stat-card::after{content:'';position:absolute;top:0;right:0;width:80px;height:80px;border-radius:50%;opacity:.07}
+.stat-card.gold::after{background:var(--gold)}
+.stat-card.blue::after{background:var(--blue)}
+.stat-card.green::after{background:var(--green)}
+.stat-card.red::after{background:var(--red)}
+.stat-icon{font-size:22px;margin-bottom:12px}
+.stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600}
+.stat-value{font-size:26px;font-weight:800;margin-top:3px;font-family:'DM Mono',monospace}
+.stat-value.gold{color:var(--gold)}
+.stat-value.blue{color:var(--blue)}
+.stat-value.green{color:var(--green)}
+.stat-value.red{color:var(--red)}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:4px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px}
+.card-title{font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-title span{font-size:16px}
+.section-title{font-size:18px;font-weight:800;margin-bottom:16px}
+
+/* ──────────── TABLES ──────────── */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:10px 14px;text-align:left;border-bottom:1px solid var(--border)}
+td{padding:12px 14px;font-size:13px;border-bottom:1px solid rgba(255,255,255,.04)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.mono{font-family:'DM Mono',monospace}
+
+/* ──────────── BADGES & STATUS ──────────── */
+.status{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600}
+.status::before{content:'';width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.status-pending{background:rgba(245,166,35,.15);color:var(--orange)}.status-pending::before{background:var(--orange)}
+.status-approved{background:rgba(62,207,142,.15);color:var(--green)}.status-approved::before{background:var(--green)}
+.status-rejected{background:rgba(224,82,82,.15);color:var(--red)}.status-rejected::before{background:var(--red)}
+.status-flagged{background:rgba(201,168,76,.15);color:var(--gold)}.status-flagged::before{background:var(--gold);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.tag{display:inline-flex;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.04em}
+.tag-expense{background:rgba(224,82,82,.15);color:var(--red)}
+.tag-revenue{background:rgba(62,207,142,.15);color:var(--green)}
+.tag-sports{background:rgba(79,156,249,.15);color:var(--blue)}
+.tag-spirit{background:rgba(201,168,76,.15);color:var(--gold)}
+.tag-house{background:rgba(62,207,142,.15);color:var(--green)}
+.tag-social{background:rgba(245,166,35,.15);color:var(--orange)}
+
+/* ──────────── FORMS ──────────── */
+.form-grid{display:grid;gap:16px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{padding:11px 14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--white);font-family:'Syne',sans-serif;font-size:13px;transition:var(--trans);outline:none}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--gold);background:rgba(201,168,76,.05)}
+.form-group select option{background:var(--navy2)}
+.form-group textarea{resize:vertical;min-height:80px}
+.form-error{font-size:11px;color:var(--red);margin-top:3px;display:none}
+.form-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:6px}
+
+/* ──────────── MODAL ──────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);z-index:200;display:none;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--navy2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:32px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;position:relative}
+.modal-lg{width:680px}
+.modal-title{font-size:20px;font-weight:800;margin-bottom:6px}
+.modal-sub{font-size:12px;color:var(--muted);margin-bottom:24px}
+.modal-close{position:absolute;top:18px;right:18px;background:rgba(255,255,255,.07);border:none;color:var(--muted);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;transition:var(--trans);display:flex;align-items:center;justify-content:center}
+.modal-close:hover{background:rgba(224,82,82,.2);color:var(--red)}
+
+/* ──────────── RECEIPT UPLOAD ──────────── */
+.receipt-zone{border:2px dashed rgba(255,255,255,.12);border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:var(--trans);position:relative}
+.receipt-zone:hover,.receipt-zone.drag{border-color:var(--gold);background:rgba(201,168,76,.04)}
+.receipt-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.receipt-zone-icon{font-size:32px;margin-bottom:8px}
+.receipt-zone-text{font-size:13px;color:var(--muted)}
+.receipt-zone-sub{font-size:11px;color:rgba(107,127,163,.6);margin-top:4px}
+.receipt-previews{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.receipt-thumb{position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.receipt-thumb img{width:100%;height:100%;object-fit:cover}
+.receipt-thumb-del{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.7);border:none;color:#fff;width:18px;height:18px;border-radius:50%;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.no-receipt-warn{background:rgba(224,82,82,.08);border:1px solid rgba(224,82,82,.25);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--red);display:flex;align-items:center;gap:8px;margin-top:10px}
+
+/* ──────────── PROGRESS BARS ──────────── */
+.prog-bar{height:7px;background:rgba(255,255,255,.06);border-radius:99px;overflow:hidden;margin-top:8px}
+.prog-fill{height:100%;border-radius:99px;transition:width 1s cubic-bezier(.4,0,.2,1)}
+.prog-fill.gold{background:linear-gradient(90deg,var(--gold),var(--gold2))}
+.prog-fill.blue{background:linear-gradient(90deg,#3b7fdf,var(--blue))}
+.prog-fill.green{background:linear-gradient(90deg,#27ae72,var(--green))}
+.prog-fill.orange{background:linear-gradient(90deg,#d4890a,var(--orange))}
+.prog-fill.purple{background:linear-gradient(90deg,#7c5bf0,var(--purple))}
+.prog-fill.pink{background:linear-gradient(90deg,#e0559a,var(--pink))}
+.prog-fill.teal{background:linear-gradient(90deg,#14b8a6,var(--teal))}
+.prog-fill.rose{background:linear-gradient(90deg,#f43f5e,var(--rose))}
+.prog-fill.indigo{background:linear-gradient(90deg,#6366f1,var(--indigo))}
+.prog-fill.amber{background:linear-gradient(90deg,#f59e0b,var(--amber))}
+.prog-fill.lime{background:linear-gradient(90deg,#84cc16,var(--lime))}
+.prog-fill.cyan{background:linear-gradient(90deg,#06b6d4,var(--cyan))}
+
+/* ──────────── COMMITTEE CARDS ──────────── */
+.committee-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;transition:var(--trans);cursor:pointer}
+.committee-card:hover{transform:translateY(-2px);border-color:var(--gold)}
+.committee-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.committee-avatar{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.committee-name{font-size:16px;font-weight:800}
+.committee-type{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+.committee-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cstat{background:rgba(255,255,255,.04);border-radius:8px;padding:12px}
+.cstat-label{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.cstat-value{font-size:18px;font-weight:800;font-family:'DM Mono',monospace;margin-top:3px}
+
+/* ──────────── MEMBER CARDS ──────────── */
+.member-row{display:flex;align-items:center;padding:12px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.05);margin-bottom:8px;transition:var(--trans)}
+.member-row:hover{background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.1)}
+.member-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0;margin-right:12px}
+.member-info{flex:1}
+.member-name{font-size:14px;font-weight:600}
+.member-username{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+.member-actions{display:flex;gap:8px}
+
+/* ──────────── TOAST ──────────── */
+#toast-container{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast{padding:12px 18px;border-radius:8px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:10px;animation:slideIn .3s cubic-bezier(.4,0,.2,1);max-width:320px}
+.toast-success{background:#1a3a2e;border:1px solid rgba(62,207,142,.35);color:var(--green)}
+.toast-error{background:#3a1a1a;border:1px solid rgba(224,82,82,.35);color:var(--red)}
+.toast-info{background:#1a2a3a;border:1px solid rgba(79,156,249,.35);color:var(--blue)}
+.toast-warn{background:#3a2e1a;border:1px solid rgba(201,168,76,.35);color:var(--gold)}
+@keyframes slideIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
+
+/* ──────────── MISC ──────────── */
+.empty{text-align:center;padding:48px;color:var(--muted)}
+.empty-icon{font-size:40px;margin-bottom:12px}
+.empty-text{font-size:15px;font-weight:600;margin-bottom:6px;color:var(--white)}
+.empty-sub{font-size:12px}
+.divider{height:1px;background:var(--border);margin:20px 0}
+.flag{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;background:rgba(245,166,35,.15);border:1px solid rgba(245,166,35,.3);border-radius:4px;font-size:10px;color:var(--orange);font-weight:600}
+.receipt-view{display:flex;gap:8px;flex-wrap:wrap}
+.receipt-view img{width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:zoom-in;transition:var(--trans)}
+.receipt-view img:hover{opacity:.8}
+.page{display:none}
+.page.active{display:block}
+.alert{padding:14px 16px;border-radius:8px;font-size:13px;display:flex;align-items:flex-start;gap:10px;margin-bottom:16px}
+.alert-warn{background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.25);color:var(--orange)}
+.alert-info{background:rgba(79,156,249,.1);border:1px solid rgba(79,156,249,.25);color:var(--blue)}
+.img-zoom-overlay{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9999;display:none;align-items:center;justify-content:center;cursor:zoom-out}
+.img-zoom-overlay.open{display:flex}
+.img-zoom-overlay img{max-width:90vw;max-height:90vh;border-radius:10px;object-fit:contain}
+@media(max-width:900px){.stats-grid{grid-template-columns:1fr 1fr}.grid-2{grid-template-columns:1fr}.grid-3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- ═══════ LOGIN SCREEN ═══════ -->
+<div id="login-screen">
+  <div class="login-glow"></div>
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-icon">🏛️</div>
+      <span>Stuco<em>Vault</em></span>
+    </div>
+    <div class="login-title">Sign in to your account</div>
+    <div class="login-sub">Student Council Fund Management</div>
+    <div class="field-group">
+      <label>Username</label>
+      <input type="text" id="login-username" placeholder="Enter username"/>
+    </div>
+    <div class="field-group">
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <p class="error-msg" id="login-error">Incorrect username or password.</p>
+    <button class="btn btn-gold" onclick="doLogin()" style="margin-top:12px">Sign In →</button>
+    <div class="login-demo">
+      <p>Demo accounts — click to auto-fill</p>
+      <div class="demo-users">
+        <div class="demo-user" onclick="fillDemo('treasurer','vault123')">
+          <div class="demo-user-info">treasurer</div>
+          <div class="demo-user-role">🏛 Treasurer · vault123</div>
+        </div>
+        <div class="demo-user" onclick="fillDemo('supervisor','vault123')">
+          <div class="demo-user-info">supervisor</div>
+          <div class="demo-user-role">🔍 Supervisor · vault123</div>
+        </div>
+        <div class="demo-user" onclick="fillDemo('alice','vault123')">
+          <div class="demo-user-info">alice</div>
+          <div class="demo-user-role">👤 Member (Sports) · vault123</div>
+        </div>
+        <div class="demo-user" onclick="fillDemo('ben','vault123')">
+          <div class="demo-user-info">ben</div>
+          <div class="demo-user-role">👤 Member (Spirit) · vault123</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ APP ═══════ -->
+<div id="app">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">🏛️</div>
+      <span>Stuco<em>Vault</em></span>
+    </div>
+    <div class="sidebar-user">
+      <div class="sidebar-user-name" id="sb-name">—</div>
+      <div class="sidebar-user-role" id="sb-username">—</div>
+      <div class="sidebar-badge" id="sb-badge">—</div>
+    </div>
+    <nav id="sidebar-nav"></nav>
+    <div class="sidebar-bottom">
+      <button class="btn btn-ghost" style="width:100%;font-size:12px" onclick="doLogout()">⎋ Sign Out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <div class="page-title" id="top-title">Dashboard</div>
+        <div class="page-subtitle" id="top-sub"></div>
+      </div>
+      <div class="topbar-actions" id="top-actions"></div>
+    </div>
+    <div class="content" id="page-content"></div>
+  </main>
+</div>
+
+<!-- ═══════ MODALS ═══════ -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal-box"></div>
+</div>
+
+<div class="img-zoom-overlay" id="img-zoom" onclick="this.classList.remove('open')">
+  <img id="img-zoom-img" src="" alt="Receipt"/>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  DATA STORE
+// ═══════════════════════════════════════════════
+const DATA = {
+  users:[
+    {id:'u1',username:'treasurer',password:'vault123',name:'Jordan Reyes',role:'treasurer',committee:null,color:'#c9a84c'},
+    {id:'u2',username:'supervisor',password:'vault123',name:'Morgan Blake',role:'supervisor',committee:null,color:'#4f9cf9'},
+    {id:'u3',username:'alice',password:'vault123',name:'Alice Chen',role:'member',committee:'sports',color:'#3ecf8e'},
+    {id:'u4',username:'ben',password:'vault123',name:'Ben Torres',role:'member',committee:'spirit',color:'#f5a623'},
+    {id:'u5',username:'carla',password:'vault123',name:'Carla Singh',role:'member',committee:'house',color:'#e05252'},
+    {id:'u6',username:'dan',password:'vault123',name:'Dan Park',role:'member',committee:'social',color:'#a78bfa'},
+  ],
+  committees:{
+    sports:{id:'sports',name:'Sports',icon:'🏅',allocated:3000,balance:1750,color:'blue'},
+    spirit:{id:'spirit',name:'Spirit',icon:'🎉',allocated:2500,balance:1900,color:'gold'},
+    house:{id:'house',name:'House',icon:'🏠',allocated:2000,balance:1200,color:'green'},
+    social:{id:'social',name:'Social',icon:'🎊',allocated:2800,balance:980,color:'orange'},
+  },
+  transactions:[
+    {id:'t1',desc:'Trophy purchase',amount:320,committee:'sports',date:'2025-04-01',type:'expense',createdBy:'u3',status:'approved',approvedBy:'u1',approvedDate:'2025-04-02'},
+    {id:'t2',desc:'Spirit kits printing',amount:450,committee:'spirit',date:'2025-04-03',type:'expense',createdBy:'u4',status:'pending',approvedBy:null,approvedDate:null},
+    {id:'t3',desc:'Ticket sales — House event',amount:600,committee:'house',date:'2025-04-04',type:'revenue',createdBy:'u5',status:'approved',approvedBy:'u2',approvedDate:'2025-04-05'},
+    {id:'t4',desc:'Social mixer food',amount:280,committee:'social',date:'2025-04-05',type:'expense',createdBy:'u6',status:'pending',approvedBy:null,approvedDate:null},
+    {id:'t5',desc:'Sports equipment',amount:540,committee:'sports',date:'2025-04-06',type:'expense',createdBy:'u3',status:'rejected',approvedBy:'u1',approvedDate:'2025-04-07'},
+    {id:'t6',desc:'Sponsorship received',amount:800,committee:'spirit',date:'2025-04-07',type:'revenue',createdBy:'u2',status:'approved',approvedBy:'u1',approvedDate:'2025-04-08'},
+  ],
+  reimbursements:[
+    {id:'r1',amount:75,reason:'Bus fare for away game',committee:'sports',requestedBy:'u3',date:'2025-04-02',status:'pending',receipts:[],receiptNames:[]},
+    {id:'r2',amount:1500,reason:'External venue hire — large event',committee:'spirit',requestedBy:'u4',date:'2025-04-04',status:'pending',receipts:[],receiptNames:[],flagged:true},
+    {id:'r3',amount:45,reason:'Printing supplies',committee:'house',requestedBy:'u5',date:'2025-04-05',status:'approved',receipts:['data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzFhMjIzNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjYzlhODRjIiBmb250LXNpemU9IjE0IiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+UmVjZWlwdCBJbWFnZTwvdGV4dD48L3N2Zz4='],receiptNames:['receipt_printing.jpg'],approvedBy:'u1',approvedDate:'2025-04-06'},
+  ],
+};
+
+let currentUser = null;
+let currentPage = 'dashboard';
+
+// ═══════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════
+function getUserById(id){return DATA.users.find(u=>u.id===id)}
+function getCommittee(id){return DATA.committees[id]}
+function money(n){return'$'+Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',')}
+function formatDate(d){if(!d)return'—';const[y,m,day]=d.split('-');const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return`${months[parseInt(m)-1]} ${parseInt(day)}, ${y}`}
+function genId(){return'x'+Math.random().toString(36).slice(2,8)}
+function today(){return new Date().toISOString().slice(0,10)}
+function can(action){
+  const r=currentUser.role;
+  const perms={
+    approve_transaction:['treasurer','supervisor'],
+    approve_reimbursement:['treasurer','supervisor'],
+    view_all:['treasurer','supervisor'],
+    manage_members:['treasurer'],
+    view_reports:['treasurer'],
+  };
+  return (perms[action]||[]).includes(r);
+}
+function avatarBg(color){
+  const map={
+    blue:'rgba(79,156,249,.2)',gold:'rgba(201,168,76,.2)',green:'rgba(62,207,142,.2)',
+    orange:'rgba(245,166,35,.2)',purple:'rgba(167,139,250,.2)',pink:'rgba(244,114,182,.2)',
+    teal:'rgba(45,212,191,.2)',rose:'rgba(251,113,133,.2)',indigo:'rgba(129,140,248,.2)',
+    amber:'rgba(251,191,36,.2)',lime:'rgba(163,230,53,.2)',cyan:'rgba(34,211,238,.2)'
+  };
+  return map[color]||'rgba(107,127,163,.2)';
+}
+function committeeTag(id){
+  const c=DATA.committees[id];
+  if(!c)return'—';
+  return`<span class="tag tag-${id}">${c.icon} ${c.name}</span>`;
+}
+
+// ═══════════════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════════════
+function fillDemo(u,p){
+  document.getElementById('login-username').value=u;
+  document.getElementById('login-password').value=p;
+}
+function doLogin(){
+  const u=document.getElementById('login-username').value.trim();
+  const p=document.getElementById('login-password').value;
+  const err=document.getElementById('login-error');
+  const user=DATA.users.find(x=>x.username===u&&x.password===p);
+  if(!user){err.style.display='block';return}
+  err.style.display='none';
+  currentUser=user;
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  setupSidebar();
+  navigateTo('dashboard');
+}
+function doLogout(){
+  currentUser=null;
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-username').value='';
+  document.getElementById('login-password').value='';
+}
+
+// ═══════════════════════════════════════════════
+//  SIDEBAR
+// ═══════════════════════════════════════════════
+function setupSidebar(){
+  const n=document.getElementById('sb-name');
+  const un=document.getElementById('sb-username');
+  const b=document.getElementById('sb-badge');
+  n.textContent=currentUser.name;
+  un.textContent='@'+currentUser.username;
+  const bMap={treasurer:'badge-treasurer 🏛 Treasurer',supervisor:'badge-supervisor 🔍 Supervisor',member:'badge-member 👤 Member'};
+  const [cls,txt]=bMap[currentUser.role].split(' ');
+  b.className='sidebar-badge '+cls;
+  b.textContent=bMap[currentUser.role].slice(cls.length+1);
+
+  const pending=DATA.transactions.filter(t=>t.status==='pending').length+
+                DATA.reimbursements.filter(r=>r.status==='pending').length;
+
+  let nav=`<div class="nav-section">Main</div>
+  <div class="nav-item" onclick="navigateTo('dashboard')"><span class="nav-icon">⬡</span>Dashboard</div>
+  <div class="nav-item" onclick="navigateTo('transactions')"><span class="nav-icon">↔</span>Transactions${can('approve_transaction')?`<span class="nav-badge">${DATA.transactions.filter(t=>t.status==='pending').length}</span>`:''}</div>
+  <div class="nav-item" onclick="navigateTo('reimbursements')"><span class="nav-icon">⟳</span>Reimbursements${can('approve_reimbursement')?`<span class="nav-badge">${DATA.reimbursements.filter(r=>r.status==='pending').length}</span>`:''}</div>
+  <div class="nav-item" onclick="navigateTo('committees')"><span class="nav-icon">◈</span>Committees</div>
+  <div class="nav-item" onclick="navigateTo('transparency')"><span class="nav-icon">◎</span>Transparency</div>`;
+  if(can('manage_members')){
+    nav+=`<div class="nav-section">Management</div>
+    <div class="nav-item" onclick="navigateTo('members')"><span class="nav-icon">◻</span>Members</div>
+    <div class="nav-item" onclick="navigateTo('manage_committees')"><span class="nav-icon">⬡</span>Committees</div>`;
+  }
+  nav+=`<div class="nav-section">Account</div>
+  <div class="nav-item" onclick="navigateTo('account')"><span class="nav-icon">◉</span>My Account</div>`;
+  document.getElementById('sidebar-nav').innerHTML=nav;
+}
+function setActiveNav(page){
+  document.querySelectorAll('.nav-item').forEach(el=>{
+    el.classList.toggle('active',el.getAttribute('onclick')===`navigateTo('${page}')`);
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════
+function navigateTo(page){
+  currentPage=page;
+  setActiveNav(page);
+  const titles={
+    dashboard:'Dashboard',transactions:'Transactions',reimbursements:'Reimbursements',
+    committees:'Committees',transparency:'Transparency',members:'Member Management',
+    manage_committees:'Committee Management',account:'My Account'
+  };
+  const subs={
+    dashboard:`Welcome back, ${currentUser.name}`,
+    transactions:'View and manage all transactions',
+    reimbursements:'Review reimbursement requests',
+    committees:'Committee budgets and activity',
+    transparency:'Financial overview',
+    members:'Manage council members',
+    manage_committees:'Add, edit or remove committees',
+    account:'Your profile and security settings'
+  };
+  document.getElementById('top-title').textContent=titles[page];
+  document.getElementById('top-sub').textContent=subs[page]||'';
+  const pages={
+    dashboard:renderDashboard,
+    transactions:renderTransactions,
+    reimbursements:renderReimbursements,
+    committees:renderCommittees,
+    transparency:renderTransparency,
+    members:renderMembers,
+    manage_committees:renderManageCommittees,
+    account:renderAccount,
+  };
+  (pages[page]||renderDashboard)();
+}
+
+// ═══════════════════════════════════════════════
+//  PAGES
+// ═══════════════════════════════════════════════
+
+// ── DASHBOARD ──
+function renderDashboard(){
+  const isAdmin=can('view_all');
+  const myCommittee=currentUser.committee;
+  let totalBudget=0,totalBalance=0,totalSpent=0;
+  Object.values(DATA.committees).forEach(c=>{
+    if(isAdmin||c.id===myCommittee){
+      totalBudget+=c.allocated;
+      totalBalance+=c.balance;
+      totalSpent+=c.allocated-c.balance;
+    }
+  });
+  const pendingTx=DATA.transactions.filter(t=>t.status==='pending'&&(isAdmin||t.committee===myCommittee));
+  const pendingRm=DATA.reimbursements.filter(r=>r.status==='pending'&&(isAdmin||r.committee===myCommittee));
+  const recentTx=DATA.transactions.filter(t=>isAdmin||t.committee===myCommittee).slice(-5).reverse();
+
+  let topActions='';
+  if(currentUser.role==='member'){
+    topActions=`<button class="btn btn-gold btn-sm" onclick="openNewTransaction()">+ New Transaction</button>
+                <button class="btn btn-ghost btn-sm" onclick="openNewReimbursement()">+ Request Reimbursement</button>`;
+  }
+  if(can('approve_transaction')){
+    topActions=`<button class="btn btn-gold btn-sm" onclick="navigateTo('transactions')">Review Pending (${pendingTx.length})</button>`;
+  }
+  document.getElementById('top-actions').innerHTML=topActions;
+
+  document.getElementById('page-content').innerHTML=`
+  <div class="stats-grid">
+    <div class="stat-card gold">
+      <div class="stat-icon">💰</div>
+      <div class="stat-label">Total Remaining</div>
+      <div class="stat-value gold">${money(totalBalance)}</div>
+      <div class="stat-sub">of ${money(totalBudget)} allocated</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-icon">⏳</div>
+      <div class="stat-label">Pending Approvals</div>
+      <div class="stat-value blue">${pendingTx.length+pendingRm.length}</div>
+      <div class="stat-sub">${pendingTx.length} transactions · ${pendingRm.length} reimbursements</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-icon">📤</div>
+      <div class="stat-label">Approved Spending</div>
+      <div class="stat-value red">${money(totalSpent)}</div>
+      <div class="stat-sub">total spent this period</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-icon">📁</div>
+      <div class="stat-label">Committees</div>
+      <div class="stat-value green">${isAdmin?Object.keys(DATA.committees).length:1}</div>
+      <div class="stat-sub">${isAdmin?'all committees':'your committee'}</div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title"><span>↔</span> Recent Transactions</div>
+      ${recentTx.length?`<div class="table-wrap"><table>
+        <thead><tr><th>Description</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>${recentTx.map(t=>`
+          <tr>
+            <td><div style="font-weight:600;font-size:13px">${t.desc}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${committeeTag(t.committee)}</div></td>
+            <td class="mono" style="color:${t.type==='expense'?'var(--red)':'var(--green)'}">${t.type==='expense'?'-':'+'} ${money(t.amount)}</td>
+            <td><span class="status status-${t.status}">${t.status}</span></td>
+            <td style="color:var(--muted);font-size:12px">${formatDate(t.date)}</td>
+          </tr>`).join('')}</tbody>
+      </table></div>`:`<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No transactions yet</div></div>`}
+    </div>
+    <div class="card">
+      <div class="card-title"><span>◈</span> Committee Balances</div>
+      ${Object.values(DATA.committees).filter(c=>isAdmin||c.id===myCommittee).map(c=>{
+        const pct=Math.round((c.balance/c.allocated)*100);
+        return`<div style="margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <div style="display:flex;align-items:center;gap:8px"><span>${c.icon}</span><span style="font-weight:700;font-size:14px">${c.name}</span></div>
+            <div class="mono" style="font-size:13px">${money(c.balance)} <span style="color:var(--muted);font-size:11px">/ ${money(c.allocated)}</span></div>
+          </div>
+          <div class="prog-bar"><div class="prog-fill ${c.color}" style="width:${pct}%"></div></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">${pct}% remaining</div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+// ── TRANSACTIONS ──
+function renderTransactions(){
+  const isAdmin=can('view_all');
+  const txs=DATA.transactions.filter(t=>isAdmin||t.committee===currentUser.committee);
+  const canAct=can('approve_transaction');
+
+  let topActions='';
+  if(currentUser.role==='member') topActions=`<button class="btn btn-gold btn-sm" onclick="openNewTransaction()">+ New Transaction</button>`;
+  document.getElementById('top-actions').innerHTML=topActions;
+
+  document.getElementById('page-content').innerHTML=`
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:0"><span>↔</span> All Transactions</div>
+      <div style="display:flex;gap:8px">
+        <select onchange="filterTx(this.value)" style="padding:7px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:var(--white);font-size:12px;font-family:'Syne',sans-serif">
+          <option value="">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+    </div>
+    <div class="table-wrap" id="tx-table-wrap">
+    ${txs.length?`<table>
+      <thead><tr><th>Description</th><th>Committee</th><th>Amount</th><th>Type</th><th>Created By</th><th>Date</th><th>Status</th>${canAct?'<th>Action</th>':''}</tr></thead>
+      <tbody id="tx-tbody">${txs.map(t=>txRow(t,canAct)).join('')}</tbody>
+    </table>`:`<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No transactions found</div><div class="empty-sub">Transactions you create will appear here</div></div>`}
+    </div>
+  </div>`;
+}
+function txRow(t,canAct){
+  const u=getUserById(t.createdBy);
+  const ab=t.approvedBy?getUserById(t.approvedBy):null;
+  return`<tr id="tr-${t.id}">
+    <td><div style="font-weight:600">${t.desc}</div>${t.approvedBy?`<div style="font-size:10px;color:var(--muted);margin-top:2px">${t.status==='approved'?'✓':'✗'} by ${ab?.name||'?'} on ${formatDate(t.approvedDate)}</div>`:''}</td>
+    <td>${committeeTag(t.committee)}</td>
+    <td class="mono" style="color:${t.type==='expense'?'var(--red)':'var(--green)'};font-weight:700">${t.type==='expense'?'-':'+'} ${money(t.amount)}</td>
+    <td><span class="tag tag-${t.type}">${t.type}</span></td>
+    <td><div style="font-size:13px">${u?.name||'?'}</div><div style="font-size:10px;color:var(--muted)">@${u?.username||'?'}</div></td>
+    <td style="color:var(--muted);font-size:12px">${formatDate(t.date)}</td>
+    <td><span class="status status-${t.status}">${t.status}</span></td>
+    ${canAct&&t.status==='pending'?`<td><div style="display:flex;gap:6px"><button class="btn btn-green btn-sm" onclick="approveTransaction('${t.id}')">Approve</button><button class="btn btn-red btn-sm" onclick="rejectTransaction('${t.id}')">Reject</button></div></td>`:canAct?'<td style="color:var(--muted);font-size:12px">Reviewed</td>':''}
+  </tr>`;
+}
+function filterTx(status){
+  const isAdmin=can('view_all');
+  const txs=DATA.transactions.filter(t=>(isAdmin||t.committee===currentUser.committee)&&(!status||t.status===status));
+  const canAct=can('approve_transaction');
+  const tbody=document.getElementById('tx-tbody');
+  if(tbody) tbody.innerHTML=txs.map(t=>txRow(t,canAct)).join('');
+}
+function approveTransaction(id){
+  const t=DATA.transactions.find(x=>x.id===id);
+  if(!t)return;
+  if(t.type==='expense'){
+    const c=DATA.committees[t.committee];
+    if(c.balance<t.amount){toast('Insufficient committee balance','error');return}
+    c.balance-=t.amount;
+  } else {
+    DATA.committees[t.committee].balance+=t.amount;
+  }
+  t.status='approved';t.approvedBy=currentUser.id;t.approvedDate=today();
+  toast('Transaction approved','success');
+  renderTransactions();setupSidebar();
+}
+function rejectTransaction(id){
+  const t=DATA.transactions.find(x=>x.id===id);
+  if(!t)return;
+  t.status='rejected';t.approvedBy=currentUser.id;t.approvedDate=today();
+  toast('Transaction rejected','error');
+  renderTransactions();setupSidebar();
+}
+
+// ── REIMBURSEMENTS ──
+function renderReimbursements(){
+  const isAdmin=can('view_all');
+  const rms=DATA.reimbursements.filter(r=>isAdmin||r.committee===currentUser.committee);
+  const canAct=can('approve_reimbursement');
+  let topActions='';
+  if(currentUser.role==='member') topActions=`<button class="btn btn-gold btn-sm" onclick="openNewReimbursement()">+ Request Reimbursement</button>`;
+  document.getElementById('top-actions').innerHTML=topActions;
+
+  document.getElementById('page-content').innerHTML=`
+  ${!canAct?`<div class="alert alert-info">⚠️ No receipt = no reimbursement. All requests require at least one receipt image to be approved.</div>`:''}
+  <div class="card">
+    <div class="card-title"><span>⟳</span> Reimbursement Requests</div>
+    ${rms.length?rms.map(r=>rmCard(r,canAct)).join(''):`<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No reimbursement requests</div><div class="empty-sub">Submit a request using the button above</div></div>`}
+  </div>`;
+}
+function rmCard(r,canAct){
+  const u=getUserById(r.requestedBy);
+  const ab=r.approvedBy?getUserById(r.approvedBy):null;
+  const hasReceipt=r.receipts&&r.receipts.length>0;
+  return`<div style="background:rgba(255,255,255,.03);border:1px solid ${r.flagged?'rgba(245,166,35,.3)':'rgba(255,255,255,.06)'};border-radius:10px;padding:18px;margin-bottom:12px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span style="font-size:16px;font-weight:800;font-family:'DM Mono',monospace;color:var(--gold)">${money(r.amount)}</span>
+          ${r.flagged?`<span class="flag">⚑ Large Amount — Flagged for Review</span>`:''}
+        </div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:3px">${r.reason}</div>
+        <div style="font-size:12px;color:var(--muted)">${committeeTag(r.committee)} · ${u?.name||'?'} · ${formatDate(r.date)}</div>
+      </div>
+      <span class="status status-${r.status}">${r.status}</span>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px">Receipts</div>
+      ${hasReceipt?`<div class="receipt-view">${r.receipts.map((src,i)=>`<img src="${src}" alt="${r.receiptNames[i]||'receipt'}" title="${r.receiptNames[i]||'receipt'}" onclick="zoomImg('${src}')" loading="lazy"/>`).join('')}</div><div style="font-size:11px;color:var(--green);margin-top:6px">✓ ${r.receipts.length} receipt image${r.receipts.length>1?'s':''} attached</div>`:
+      `<div class="no-receipt-warn">🚫 No receipt provided — <strong>No receipt = no reimbursement</strong></div>`}
+    </div>
+    ${r.approvedBy?`<div style="font-size:11px;color:var(--muted)">${r.status==='approved'?'✓ Approved':'✗ Rejected'} by ${ab?.name||'?'} on ${formatDate(r.approvedDate)}</div>`:''}
+    ${canAct&&r.status==='pending'?`<div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-green btn-sm" onclick="approveReimbursement('${r.id}')">Approve</button>
+      <button class="btn btn-red btn-sm" onclick="rejectReimbursement('${r.id}')">Reject</button>
+    </div>`:''}
+  </div>`;
+}
+function approveReimbursement(id){
+  const r=DATA.reimbursements.find(x=>x.id===id);
+  if(!r)return;
+  if(!r.receipts||r.receipts.length===0){toast('Cannot approve without receipt evidence','error');return}
+  const c=DATA.committees[r.committee];
+  if(c.balance<r.amount){toast('Insufficient committee balance','error');return}
+  c.balance-=r.amount;
+  r.status='approved';r.approvedBy=currentUser.id;r.approvedDate=today();
+  toast('Reimbursement approved','success');
+  renderReimbursements();setupSidebar();
+}
+function rejectReimbursement(id){
+  const r=DATA.reimbursements.find(x=>x.id===id);
+  if(!r)return;
+  r.status='rejected';r.approvedBy=currentUser.id;r.approvedDate=today();
+  toast('Reimbursement rejected','error');
+  renderReimbursements();setupSidebar();
+}
+
+// ── COMMITTEES ──
+function renderCommittees(){
+  const isAdmin=can('view_all');
+  document.getElementById('top-actions').innerHTML='';
+  const committees=Object.values(DATA.committees).filter(c=>isAdmin||c.id===currentUser.committee);
+  document.getElementById('page-content').innerHTML=`
+  <div class="grid-2" style="margin-bottom:24px">
+    ${committees.map(c=>{
+      const members=DATA.users.filter(u=>u.committee===c.id);
+      const recentTx=DATA.transactions.filter(t=>t.committee===c.id).slice(-3).reverse();
+      const pct=Math.round((c.balance/c.allocated)*100);
+      return`<div class="committee-card">
+        <div class="committee-header">
+          <div class="committee-avatar" style="background:${avatarBg(c.color)}">${c.icon}</div>
+          <div>
+            <div class="committee-name">${c.name} Committee</div>
+            <div class="committee-type">${members.length} member${members.length!==1?'s':''}</div>
+          </div>
+        </div>
+        <div class="committee-stats" style="margin-bottom:16px">
+          <div class="cstat">
+            <div class="cstat-label">Allocated</div>
+            <div class="cstat-value">${money(c.allocated)}</div>
+          </div>
+          <div class="cstat">
+            <div class="cstat-label">Balance</div>
+            <div class="cstat-value" style="color:${pct<30?'var(--red)':pct<60?'var(--orange)':'var(--green)'}">${money(c.balance)}</div>
+          </div>
+        </div>
+        <div style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px"><span>Budget usage</span><span>${100-pct}% spent</span></div>
+          <div class="prog-bar"><div class="prog-fill ${c.color}" style="width:${pct}%"></div></div>
+        </div>
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:8px">Recent Activity</div>
+        ${recentTx.length?recentTx.map(t=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+          <div style="font-size:12px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.desc}</div>
+          <div style="font-size:12px;font-family:'DM Mono',monospace;color:${t.type==='expense'?'var(--red)':'var(--green)'};">${t.type==='expense'?'-':'+'} ${money(t.amount)}</div>
+        </div>`).join(''):`<div style="font-size:12px;color:var(--muted)">No recent activity</div>`}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+// ── TRANSPARENCY ──
+function renderTransparency(){
+  document.getElementById('top-actions').innerHTML='';
+  const committees=Object.values(DATA.committees);
+  const totalAllocated=committees.reduce((s,c)=>s+c.allocated,0);
+  const totalBalance=committees.reduce((s,c)=>s+c.balance,0);
+  const totalSpent=totalAllocated-totalBalance;
+  const totalRevenue=DATA.transactions.filter(t=>t.type==='revenue'&&t.status==='approved').reduce((s,t)=>s+t.amount,0);
+
+  document.getElementById('page-content').innerHTML=`
+  <div class="stats-grid" style="margin-bottom:24px">
+    <div class="stat-card gold"><div class="stat-icon">🏦</div><div class="stat-label">Total Allocated</div><div class="stat-value gold">${money(totalAllocated)}</div></div>
+    <div class="stat-card green"><div class="stat-icon">💸</div><div class="stat-label">Total Remaining</div><div class="stat-value green">${money(totalBalance)}</div></div>
+    <div class="stat-card red"><div class="stat-icon">📤</div><div class="stat-label">Total Spent</div><div class="stat-value red">${money(totalSpent)}</div></div>
+    <div class="stat-card blue"><div class="stat-icon">📥</div><div class="stat-label">Total Revenue</div><div class="stat-value blue">${money(totalRevenue)}</div></div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title"><span>◈</span> Committee Breakdown</div>
+    ${committees.map(c=>{
+      const pct=Math.round((c.balance/c.allocated)*100);
+      const spent=c.allocated-c.balance;
+      return`<div style="margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:20px">${c.icon}</span>
+            <div>
+              <div style="font-weight:800;font-size:15px">${c.name}</div>
+              <div style="font-size:11px;color:var(--muted)">${DATA.users.filter(u=>u.committee===c.id).length} members</div>
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div class="mono" style="font-size:15px;font-weight:700">${money(c.balance)}</div>
+            <div style="font-size:11px;color:var(--muted)">of ${money(c.allocated)}</div>
+          </div>
+        </div>
+        <div class="prog-bar" style="height:10px"><div class="prog-fill ${c.color}" style="width:${pct}%"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:5px">
+          <span>Remaining: ${pct}%</span>
+          <span>Spent: ${money(spent)}</span>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>
+  <div class="card">
+    <div class="card-title"><span>⟳</span> Recent Approved Spending</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Description</th><th>Committee</th><th>Amount</th><th>Type</th><th>Date</th></tr></thead>
+      <tbody>${DATA.transactions.filter(t=>t.status==='approved').slice(-8).reverse().map(t=>`
+        <tr>
+          <td style="font-weight:500">${t.desc}</td>
+          <td>${committeeTag(t.committee)}</td>
+          <td class="mono" style="color:${t.type==='expense'?'var(--red)':'var(--green)'};font-weight:700">${t.type==='expense'?'-':'+'} ${money(t.amount)}</td>
+          <td><span class="tag tag-${t.type}">${t.type}</span></td>
+          <td style="color:var(--muted);font-size:12px">${formatDate(t.date)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>
+  </div>`;
+}
+
+// ── MEMBERS ──
+function renderMembers(){
+  document.getElementById('top-actions').innerHTML=`<button class="btn btn-gold btn-sm" onclick="openAddMember()">+ Add User</button>`;
+  const managed=DATA.users.filter(u=>u.role!=='treasurer');
+  const supervisors=managed.filter(u=>u.role==='supervisor');
+  const members=managed.filter(u=>u.role==='member');
+  const roleColors={'supervisor':'#4f9cf9','member':'#3ecf8e'};
+  const roleBadge={'supervisor':'badge-supervisor 🔍 Supervisor','member':'badge-member 👤 Member'};
+  const userRowHtml=(m)=>{
+    const c=m.committee?DATA.committees[m.committee]:null;
+    const avatarColors=['#c9a84c','#4f9cf9','#3ecf8e','#f5a623','#e05252','#a78bfa','#f472b6','#2dd4bf'];
+    const bg=avatarColors[DATA.users.indexOf(m)%avatarColors.length];
+    const [badgeCls,badgeTxt]=(roleBadge[m.role]||'badge-member 👤 Member').split(' ').reduce((a,v,i)=>i===0?[v,a[1]]:[a[0],a[1]+' '+v],['','']);
+    return`<div class="member-row" id="mr-${m.id}">
+      <div class="member-avatar" style="background:${bg}22;color:${bg}">${m.name.charAt(0)}</div>
+      <div class="member-info">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="member-name">${m.name}</span>
+          <span class="sidebar-badge ${badgeCls.trim()}" style="font-size:10px">${badgeTxt.trim()}</span>
+        </div>
+        <div class="member-username">@${m.username}${m.role==='member'?' · '+(c?c.icon+' '+c.name:'No committee'):' · All committees'}</div>
+      </div>
+      <div class="member-actions">
+        ${m.role==='member'?`<button class="btn btn-ghost btn-sm" onclick="openTransferMember('${m.id}')">Transfer</button>`:''}
+        <button class="btn btn-red btn-sm" onclick="removeMember('${m.id}')">Remove</button>
+      </div>
+    </div>`;
+  };
+  document.getElementById('page-content').innerHTML=`
+  ${supervisors.length?`<div class="card" style="margin-bottom:16px">
+    <div class="card-title"><span>🔍</span> Supervisors</div>
+    <div id="supervisor-list">${supervisors.map(userRowHtml).join('')}</div>
+  </div>`:''}
+  <div class="card">
+    <div class="card-title"><span>👤</span> Members</div>
+    <div id="member-list">
+    ${members.length?members.map(userRowHtml).join(''):`<div class="empty"><div class="empty-icon">👤</div><div class="empty-text">No members yet</div><div class="empty-sub">Add members using the button above</div></div>`}
+    </div>
+  </div>`;
+}
+function removeMember(id){
+  if(!confirm('Remove this member from the system?'))return;
+  const idx=DATA.users.findIndex(u=>u.id===id);
+  if(idx>-1)DATA.users.splice(idx,1);
+  toast('Member removed','error');renderMembers();
+}
+function openTransferMember(id){
+  const m=DATA.users.find(u=>u.id===id);
+  if(!m)return;
+  openModal(`<div class="modal-title">Transfer Member</div>
+  <div class="modal-sub">Move ${m.name} to a different committee</div>
+  <div class="form-group">
+    <label>New Committee</label>
+    <select id="transfer-committee">
+      ${Object.values(DATA.committees).map(c=>`<option value="${c.id}" ${c.id===m.committee?'selected':''}>${c.icon} ${c.name}</option>`).join('')}
+    </select>
+  </div>
+  <div class="form-actions" style="margin-top:16px">
+    <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-gold btn-sm" onclick="doTransfer('${m.id}')">Transfer</button>
+  </div>`);
+}
+function doTransfer(id){
+  const m=DATA.users.find(u=>u.id===id);
+  const nc=document.getElementById('transfer-committee').value;
+  m.committee=nc;closeModal();toast(`${m.name} transferred to ${DATA.committees[nc].name}`,'success');renderMembers();
+}
+function openAddMember(){
+  openModal(`<div class="modal-title">Add New User</div>
+  <div class="modal-sub">Create a new member or supervisor account</div>
+  <div class="form-grid">
+    <div class="form-row">
+      <div class="form-group"><label>Full Name</label><input id="nm-name" placeholder="e.g. Sam Lee"/></div>
+      <div class="form-group"><label>Username</label><input id="nm-user" placeholder="e.g. sam.lee"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Password</label><input type="password" id="nm-pass" placeholder="Password"/></div>
+      <div class="form-group">
+        <label>Role</label>
+        <select id="nm-role" onchange="toggleCommitteeField(this.value)">
+          <option value="member">👤 Member</option>
+          <option value="supervisor">🔍 Supervisor</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" id="nm-committee-group">
+      <label>Committee</label>
+      <select id="nm-committee">
+        ${Object.values(DATA.committees).map(c=>`<option value="${c.id}">${c.icon} ${c.name}</option>`).join('')}
+      </select>
+      <p style="font-size:11px;color:var(--muted);margin-top:4px">Members are assigned to one committee only</p>
+    </div>
+    <div id="nm-supervisor-note" style="display:none;background:rgba(79,156,249,.08);border:1px solid rgba(79,156,249,.2);border-radius:8px;padding:12px;font-size:12px;color:var(--blue)">
+      🔍 Supervisors can view all committees, verify purchases, and approve or reject requests. They are not assigned to a specific committee.
+    </div>
+  </div>
+  <p id="nm-err" style="color:var(--red);font-size:12px;margin-top:8px;display:none"></p>
+  <div class="form-actions" style="margin-top:16px">
+    <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-gold btn-sm" onclick="doAddMember()">Add User</button>
+  </div>`);
+}
+function toggleCommitteeField(role){
+  const cg=document.getElementById('nm-committee-group');
+  const sn=document.getElementById('nm-supervisor-note');
+  if(cg)cg.style.display=role==='supervisor'?'none':'flex';
+  if(sn)sn.style.display=role==='supervisor'?'block':'none';
+}
+function doAddMember(){
+  const name=document.getElementById('nm-name').value.trim();
+  const user=document.getElementById('nm-user').value.trim();
+  const pass=document.getElementById('nm-pass').value;
+  const role=document.getElementById('nm-role').value;
+  const committee=role==='member'?(document.getElementById('nm-committee')?.value||null):null;
+  const err=document.getElementById('nm-err');
+  if(!name||!user||!pass){err.textContent='All fields required.';err.style.display='block';return}
+  if(DATA.users.find(u=>u.username===user)){err.textContent='Username already taken.';err.style.display='block';return}
+  DATA.users.push({id:genId(),username:user,password:pass,name,role,committee,color:'#a78bfa'});
+  closeModal();
+  toast(`${role==='supervisor'?'Supervisor':'Member'} "${name}" added`,'success');
+  renderMembers();setupSidebar();
+}
+
+// ── ACCOUNT ──
+function renderAccount(){
+  document.getElementById('top-actions').innerHTML='';
+  document.getElementById('page-content').innerHTML=`
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title"><span>◉</span> Profile</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Full Name</label><input id="acc-name" value="${currentUser.name}"/></div>
+        <div class="form-group"><label>Username</label><input id="acc-username" value="${currentUser.username}"/></div>
+        <div class="form-group"><label>Role</label><input value="${currentUser.role}" disabled style="opacity:.5;cursor:not-allowed"/></div>
+        ${currentUser.committee?`<div class="form-group"><label>Committee</label><input value="${DATA.committees[currentUser.committee]?.name||'—'}" disabled style="opacity:.5;cursor:not-allowed"/></div>`:''}
+      </div>
+      <p id="acc-err" style="color:var(--red);font-size:12px;margin-top:8px;display:none"></p>
+      <div class="form-actions" style="margin-top:16px"><button class="btn btn-gold btn-sm" onclick="saveProfile()">Save Changes</button></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>🔒</span> Change Password</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Current Password</label><input type="password" id="pw-old" placeholder="Current password"/></div>
+        <div class="form-group"><label>New Password</label><input type="password" id="pw-new" placeholder="New password"/></div>
+        <div class="form-group"><label>Confirm New Password</label><input type="password" id="pw-confirm" placeholder="Confirm new password"/></div>
+      </div>
+      <p id="pw-err" style="color:var(--red);font-size:12px;margin-top:8px;display:none"></p>
+      <div class="form-actions" style="margin-top:16px"><button class="btn btn-gold btn-sm" onclick="changePassword()">Update Password</button></div>
+    </div>
+  </div>`;
+}
+function saveProfile(){
+  const name=document.getElementById('acc-name').value.trim();
+  const username=document.getElementById('acc-username').value.trim();
+  const err=document.getElementById('acc-err');
+  if(!name||!username){err.textContent='Name and username required.';err.style.display='block';return}
+  if(username!==currentUser.username&&DATA.users.find(u=>u.username===username&&u.id!==currentUser.id)){err.textContent='Username already taken.';err.style.display='block';return}
+  err.style.display='none';
+  currentUser.name=name;currentUser.username=username;
+  toast('Profile updated','success');setupSidebar();
+}
+function changePassword(){
+  const old=document.getElementById('pw-old').value;
+  const nw=document.getElementById('pw-new').value;
+  const conf=document.getElementById('pw-confirm').value;
+  const err=document.getElementById('pw-err');
+  if(old!==currentUser.password){err.textContent='Current password is incorrect.';err.style.display='block';return}
+  if(!nw||nw.length<4){err.textContent='New password must be at least 4 characters.';err.style.display='block';return}
+  if(nw!==conf){err.textContent='Passwords do not match.';err.style.display='block';return}
+  err.style.display='none';
+  currentUser.password=nw;
+  toast('Password updated successfully','success');
+  document.getElementById('pw-old').value='';document.getElementById('pw-new').value='';document.getElementById('pw-confirm').value='';
+}
+
+// ═══════════════════════════════════════════════
+//  NEW TRANSACTION MODAL
+// ═══════════════════════════════════════════════
+function openNewTransaction(){
+  const committeeOptions=currentUser.role==='member'
+    ?`<option value="${currentUser.committee}">${DATA.committees[currentUser.committee]?.icon} ${DATA.committees[currentUser.committee]?.name}</option>`
+    :Object.values(DATA.committees).map(c=>`<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
+  openModal(`<div class="modal-title">New Transaction</div>
+  <div class="modal-sub">Record a new expense or revenue</div>
+  <div class="form-grid">
+    <div class="form-group"><label>Description</label><input id="nt-desc" placeholder="What was this transaction for?"/><p class="form-error" id="nt-desc-err">Description is required</p></div>
+    <div class="form-row">
+      <div class="form-group"><label>Amount ($)</label><input type="number" id="nt-amount" placeholder="0.00" min="0.01" step="0.01"/><p class="form-error" id="nt-amount-err">Valid amount required</p></div>
+      <div class="form-group"><label>Type</label><select id="nt-type"><option value="expense">Expense</option><option value="revenue">Revenue</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Committee</label><select id="nt-committee">${committeeOptions}</select></div>
+      <div class="form-group"><label>Date</label><input type="date" id="nt-date" value="${today()}"/></div>
+    </div>
+  </div>
+  <div class="form-actions" style="margin-top:16px">
+    <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-gold btn-sm" onclick="submitTransaction()">Submit Transaction</button>
+  </div>`);
+}
+function submitTransaction(){
+  const desc=document.getElementById('nt-desc').value.trim();
+  const amount=parseFloat(document.getElementById('nt-amount').value);
+  const type=document.getElementById('nt-type').value;
+  const committee=document.getElementById('nt-committee').value;
+  const date=document.getElementById('nt-date').value;
+  let ok=true;
+  const de=document.getElementById('nt-desc-err'),ae=document.getElementById('nt-amount-err');
+  de.style.display='none';ae.style.display='none';
+  if(!desc){de.style.display='block';ok=false}
+  if(!amount||amount<=0){ae.style.display='block';ok=false}
+  if(!ok)return;
+  // duplicate check
+  if(DATA.transactions.find(t=>t.desc===desc&&t.amount===amount&&t.committee===committee&&t.date===date)){
+    toast('Duplicate transaction detected','error');return;
+  }
+  DATA.transactions.push({id:genId(),desc,amount,committee,date,type,createdBy:currentUser.id,status:'pending',approvedBy:null,approvedDate:null});
+  closeModal();toast('Transaction submitted for review','success');
+  if(currentPage==='transactions')renderTransactions();
+  else if(currentPage==='dashboard')renderDashboard();
+  setupSidebar();
+}
+
+// ═══════════════════════════════════════════════
+//  NEW REIMBURSEMENT MODAL
+// ═══════════════════════════════════════════════
+let rmReceipts=[];let rmReceiptNames=[];
+function openNewReimbursement(){
+  rmReceipts=[];rmReceiptNames=[];
+  const committeeOptions=currentUser.role==='member'
+    ?`<option value="${currentUser.committee}">${DATA.committees[currentUser.committee]?.icon} ${DATA.committees[currentUser.committee]?.name}</option>`
+    :Object.values(DATA.committees).map(c=>`<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
+  openModal(`<div class="modal-title">Request Reimbursement</div>
+  <div class="modal-sub">Submit a reimbursement with receipt evidence</div>
+  <div class="form-grid">
+    <div class="form-row">
+      <div class="form-group"><label>Amount ($)</label><input type="number" id="rm-amount" placeholder="0.00" min="0.01" step="0.01"/><p class="form-error" id="rm-amount-err">Valid amount required</p></div>
+      <div class="form-group"><label>Committee</label><select id="rm-committee">${committeeOptions}</select></div>
+    </div>
+    <div class="form-group"><label>Reason</label><textarea id="rm-reason" placeholder="Describe what this reimbursement is for..."></textarea><p class="form-error" id="rm-reason-err">Reason is required</p></div>
+    <div class="form-group">
+      <label>Receipts (Required for approval)</label>
+      <div class="receipt-zone" id="rm-dropzone">
+        <input type="file" accept="image/*" multiple onchange="handleReceiptUpload(event)" id="rm-file-input"/>
+        <div class="receipt-zone-icon">📎</div>
+        <div class="receipt-zone-text">Click or drag to upload receipt images</div>
+        <div class="receipt-zone-sub">JPG, PNG, GIF, WEBP accepted. Multiple files allowed.</div>
+      </div>
+      <div class="receipt-previews" id="rm-previews"></div>
+      <div class="no-receipt-warn" id="rm-no-receipt-warn">🚫 No receipt = no reimbursement. Upload at least one receipt image.</div>
+    </div>
+  </div>
+  <div class="form-actions" style="margin-top:16px">
+    <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-gold btn-sm" onclick="submitReimbursement()">Submit Request</button>
+  </div>`,'modal-lg');
+}
+function handleReceiptUpload(e){
+  const files=[...e.target.files];
+  const valid=files.filter(f=>f.type.startsWith('image/'));
+  if(valid.length!==files.length)toast('Only image files accepted','error');
+  valid.forEach(f=>{
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      rmReceipts.push(ev.target.result);
+      rmReceiptNames.push(f.name);
+      updateReceiptPreviews();
+    };
+    reader.readAsDataURL(f);
+  });
+}
+function updateReceiptPreviews(){
+  const p=document.getElementById('rm-previews');
+  const w=document.getElementById('rm-no-receipt-warn');
+  if(!p||!w)return;
+  p.innerHTML=rmReceipts.map((src,i)=>`<div class="receipt-thumb"><img src="${src}" alt="${rmReceiptNames[i]}"/><button class="receipt-thumb-del" onclick="removeReceipt(${i})">×</button></div>`).join('');
+  w.style.display=rmReceipts.length?'none':'flex';
+}
+function removeReceipt(i){
+  rmReceipts.splice(i,1);rmReceiptNames.splice(i,1);updateReceiptPreviews();
+}
+function submitReimbursement(){
+  const amount=parseFloat(document.getElementById('rm-amount').value);
+  const reason=document.getElementById('rm-reason').value.trim();
+  const committee=document.getElementById('rm-committee').value;
+  let ok=true;
+  const ae=document.getElementById('rm-amount-err'),re=document.getElementById('rm-reason-err');
+  ae.style.display='none';re.style.display='none';
+  if(!amount||amount<=0){ae.style.display='block';ok=false}
+  if(!reason){re.style.display='block';ok=false}
+  if(!ok)return;
+  const flagged=amount>500;
+  DATA.reimbursements.push({id:genId(),amount,reason,committee,requestedBy:currentUser.id,date:today(),status:'pending',receipts:[...rmReceipts],receiptNames:[...rmReceiptNames],flagged,approvedBy:null,approvedDate:null});
+  closeModal();
+  if(flagged)toast('Request submitted — flagged for large amount review','warn');
+  else toast('Reimbursement request submitted','success');
+  if(currentPage==='reimbursements')renderReimbursements();
+  setupSidebar();
+}
+
+// ═══════════════════════════════════════════════
+//  COMMITTEE MANAGEMENT (Treasurer only)
+// ═══════════════════════════════════════════════
+const COMMITTEE_COLORS=[
+  {id:'blue',label:'🔵 Blue'},
+  {id:'gold',label:'🟡 Gold'},
+  {id:'green',label:'🟢 Green'},
+  {id:'orange',label:'🟠 Orange'},
+  {id:'purple',label:'🟣 Purple'},
+  {id:'pink',label:'🩷 Pink'},
+  {id:'teal',label:'🩵 Teal'},
+  {id:'rose',label:'🌹 Rose'},
+  {id:'indigo',label:'💜 Indigo'},
+  {id:'amber',label:'🌕 Amber'},
+  {id:'lime',label:'🍏 Lime'},
+  {id:'cyan',label:'🩦 Cyan'},
+];
+const COMMITTEE_ICONS=['🏅','🎉','🏠','🎊','🎭','🏆','📚','🎨','🎵','🌟','⚽','🏀','🎓','💡','🤝'];
+
+function renderManageCommittees(){
+  if(!can('manage_members')){toast('Access denied','error');navigateTo('dashboard');return}
+  document.getElementById('top-actions').innerHTML=`<button class="btn btn-gold btn-sm" onclick="openAddCommittee()">+ Add Committee</button>`;
+  const committees=Object.values(DATA.committees);
+  document.getElementById('page-content').innerHTML=`
+  <div class="card">
+    <div class="card-title"><span>⬡</span> All Committees</div>
+    <div id="committee-manage-list">
+    ${committees.length?committees.map(c=>committeeManageRow(c)).join(''):`<div class="empty"><div class="empty-icon">🏛️</div><div class="empty-text">No committees yet</div><div class="empty-sub">Add your first committee above</div></div>`}
+    </div>
+  </div>`;
+}
+
+function committeeManageRow(c){
+  const memberCount=DATA.users.filter(u=>u.committee===c.id).length;
+  const txCount=DATA.transactions.filter(t=>t.committee===c.id).length;
+  const pct=c.allocated>0?Math.round((c.balance/c.allocated)*100):0;
+  return`<div style="display:flex;align-items:center;gap:16px;padding:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;margin-bottom:10px;transition:var(--trans)" id="cmr-${c.id}">
+    <div style="width:44px;height:44px;border-radius:10px;background:${avatarBg(c.color)};display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${c.icon}</div>
+    <div style="flex:1">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+        <span style="font-weight:800;font-size:15px">${c.name}</span>
+        <span class="tag tag-${c.id}" style="font-size:10px">${c.id}</span>
+      </div>
+      <div style="display:flex;gap:16px;font-size:12px;color:var(--muted)">
+        <span>Allocated: <strong style="color:var(--white)">${money(c.allocated)}</strong></span>
+        <span>Balance: <strong style="color:${pct<30?'var(--red)':pct<60?'var(--orange)':'var(--green)'}">${money(c.balance)}</strong></span>
+        <span>Members: <strong style="color:var(--white)">${memberCount}</strong></span>
+        <span>Transactions: <strong style="color:var(--white)">${txCount}</strong></span>
+      </div>
+      <div class="prog-bar" style="margin-top:8px;max-width:300px"><div class="prog-fill ${c.color}" style="width:${pct}%"></div></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-shrink:0">
+      <button class="btn btn-ghost btn-sm" onclick="openEditCommittee('${c.id}')">✎ Edit</button>
+      <button class="btn btn-red btn-sm" onclick="confirmDeleteCommittee('${c.id}')">✕ Remove</button>
+    </div>
+  </div>`;
+}
+
+function openAddCommittee(){
+  openModal(`<div class="modal-title">Add New Committee</div>
+  <div class="modal-sub">Create a new committee with its own budget</div>
+  <div class="form-grid">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Committee Name</label>
+        <input id="ac-name" placeholder="e.g. Arts"/>
+        <p class="form-error" id="ac-name-err">Name is required</p>
+      </div>
+      <div class="form-group">
+        <label>Committee ID</label>
+        <input id="ac-id" placeholder="e.g. arts (lowercase, no spaces)"/>
+        <p class="form-error" id="ac-id-err">ID is required and must be unique</p>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Allocated Budget ($)</label>
+        <input type="number" id="ac-allocated" placeholder="e.g. 2000" min="0" step="0.01"/>
+        <p class="form-error" id="ac-alloc-err">Amount must be greater than 0</p>
+      </div>
+      <div class="form-group">
+        <label>Starting Balance ($)</label>
+        <input type="number" id="ac-balance" placeholder="e.g. 2000" min="0" step="0.01"/>
+        <p class="form-error" id="ac-bal-err">Cannot exceed allocated budget</p>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Icon</label>
+        <select id="ac-icon">${COMMITTEE_ICONS.map(i=>`<option value="${i}">${i}</option>`).join('')}</select>
+      </div>
+      <div class="form-group">
+        <label>Color Theme</label>
+        <select id="ac-color">${COMMITTEE_COLORS.map(c=>`<option value="${c.id}">${c.label}</option>`).join('')}</select>
+      </div>
+    </div>
+  </div>
+  <p id="ac-err" style="color:var(--red);font-size:12px;margin-top:8px;display:none"></p>
+  <div class="form-actions" style="margin-top:16px">
+    <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-gold btn-sm" onclick="doAddCommittee()">Add Committee</button>
+  </div>`);
+  // auto-generate ID from name
+  document.getElementById('ac-name').addEventListener('input',function(){
+    const id=this.value.toLowerCase().replace(/[^a-z0-9]/g,'');
+    document.getElementById('ac-id').value=id;
+  });
+}
+
+function doAddCommittee(){
+  const name=document.getElementById('ac-name').value.trim();
+  const id=document.getElementById('ac-id').value.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
+  const allocated=parseFloat(document.getElementById('ac-allocated').value);
+  const balance=parseFloat(document.getElementById('ac-balance').value);
+  const icon=document.getElementById('ac-icon').value;
+  const color=document.getElementById('ac-color').value;
+  let ok=true;
+  ['ac-name-err','ac-id-err','ac-alloc-err','ac-bal-err'].forEach(e=>document.getElementById(e).style.display='none');
+  const ge=document.getElementById('ac-err');ge.style.display='none';
+  if(!name){document.getElementById('ac-name-err').style.display='block';ok=false}
+  if(!id){document.getElementById('ac-id-err').style.display='block';ok=false}
+  if(DATA.committees[id]){document.getElementById('ac-id-err').textContent='This ID already exists.';document.getElementById('ac-id-err').style.display='block';ok=false}
+  if(!allocated||allocated<=0){document.getElementById('ac-alloc-err').style.display='block';ok=false}
+  if(isNaN(balance)||balance<0||balance>allocated){document.getElementById('ac-bal-err').style.display='block';ok=false}
+  if(!ok)return;
+  DATA.committees[id]={id,name,icon,allocated,balance,color};
+  closeModal();toast(`${icon} ${name} committee added`,'success');
+  renderManageCommittees();setupSidebar();
+}
+
+function openEditCommittee(id){
+  const c=DATA.committees[id];
+  if(!c)return;
+  openModal(`<div class="modal-title">Edit Committee</div>
+  <div class="modal-sub">Update details for the ${c.name} committee</div>
+  <div class="form-grid">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Committee Name</label>
+        <input id="ec-name" value="${c.name}"/>
+        <p class="form-error" id="ec-name-err">Name is required</p>
+      </div>
+      <div class="form-group">
+        <label>Committee ID</label>
+        <input value="${c.id}" disabled style="opacity:.5;cursor:not-allowed"/>
+        <p style="font-size:10px;color:var(--muted);margin-top:4px">ID cannot be changed after creation</p>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Allocated Budget ($)</label>
+        <input type="number" id="ec-allocated" value="${c.allocated}" min="0" step="0.01"/>
+        <p class="form-error" id="ec-alloc-err">Must be greater than current balance</p>
+      </div>
+      <div class="form-group">
+        <label>Current Balance ($)</label>
+        <input type="number" id="ec-balance" value="${c.balance}" min="0" step="0.01"/>
+        <p class="form-error" id="ec-bal-err">Cannot exceed allocated budget</p>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Icon</label>
+        <select id="ec-icon">${COMMITTEE_ICONS.map(i=>`<option value="${i}" ${i===c.icon?'selected':''}>${i}</option>`).join('')}</select>
+      </div>
+      <div class="form-group">
+        <label>Color Theme</label>
+        <select id="ec-color">${COMMITTEE_COLORS.map(col=>`<option value="${col.id}" ${col.id===c.color?'selected':''}>${col.label}</option>`).join('')}</select>
+      </div>
+    </div>
+  </div>
+  <div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);border-radius:8px;padding:12px;font-size:12px;color:var(--orange);margin-top:8px">
+    ⚠️ Changing the allocated budget or balance will directly affect financial records. Adjust carefully.
+  </div>
+  <div class="form-actions" style="margin-top:16px">
+    <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-gold btn-sm" onclick="doEditCommittee('${id}')">Save Changes</button>
+  </div>`);
+}
+
+function doEditCommittee(id){
+  const c=DATA.committees[id];
+  if(!c)return;
+  const name=document.getElementById('ec-name').value.trim();
+  const allocated=parseFloat(document.getElementById('ec-allocated').value);
+  const balance=parseFloat(document.getElementById('ec-balance').value);
+  const icon=document.getElementById('ec-icon').value;
+  const color=document.getElementById('ec-color').value;
+  let ok=true;
+  ['ec-name-err','ec-alloc-err','ec-bal-err'].forEach(e=>document.getElementById(e).style.display='none');
+  if(!name){document.getElementById('ec-name-err').style.display='block';ok=false}
+  if(!allocated||allocated<=0){document.getElementById('ec-alloc-err').style.display='block';ok=false}
+  if(isNaN(balance)||balance<0||balance>allocated){document.getElementById('ec-bal-err').style.display='block';ok=false}
+  if(!ok)return;
+  c.name=name;c.allocated=allocated;c.balance=balance;c.icon=icon;c.color=color;
+  closeModal();toast(`${icon} ${name} updated`,'success');
+  renderManageCommittees();
+}
+
+function confirmDeleteCommittee(id){
+  const c=DATA.committees[id];
+  if(!c)return;
+  const memberCount=DATA.users.filter(u=>u.committee===id).length;
+  const txCount=DATA.transactions.filter(t=>t.committee===id).length;
+  openModal(`<div class="modal-title" style="color:var(--red)">Remove Committee</div>
+  <div class="modal-sub">This action cannot be undone</div>
+  <div style="background:rgba(224,82,82,.08);border:1px solid rgba(224,82,82,.25);border-radius:10px;padding:18px;margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <span style="font-size:28px">${c.icon}</span>
+      <div>
+        <div style="font-weight:800;font-size:16px">${c.name} Committee</div>
+        <div style="font-size:12px;color:var(--muted)">ID: ${c.id}</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="background:rgba(255,255,255,.04);border-radius:7px;padding:10px;text-align:center">
+        <div style="font-size:18px;font-weight:800;font-family:'DM Mono',monospace">${money(c.balance)}</div>
+        <div style="font-size:10px;color:var(--muted)">Balance</div>
+      </div>
+      <div style="background:rgba(255,255,255,.04);border-radius:7px;padding:10px;text-align:center">
+        <div style="font-size:18px;font-weight:800">${memberCount}</div>
+        <div style="font-size:10px;color:var(--muted)">Members</div>
+      </div>
+      <div style="background:rgba(255,255,255,.04);border-radius:7px;padding:10px;text-align:center">
+        <div style="font-size:18px;font-weight:800">${txCount}</div>
+        <div style="font-size:10px;color:var(--muted)">Transactions</div>
+      </div>
+    </div>
+    ${memberCount>0?`<div style="font-size:12px;color:var(--orange);">⚠️ ${memberCount} member${memberCount>1?'s':''} will be unassigned from this committee.</div>`:''}
+    ${txCount>0?`<div style="font-size:12px;color:var(--orange);margin-top:4px">⚠️ ${txCount} transaction record${txCount>1?'s':''} linked to this committee will remain in history.</div>`:''}
+  </div>
+  <div class="form-group" style="margin-bottom:16px">
+    <label>Type the committee name to confirm: <strong style="color:var(--white)">${c.name}</strong></label>
+    <input id="del-confirm-input" placeholder="Type committee name here"/>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-red btn-sm" onclick="doDeleteCommittee('${id}')">Delete Permanently</button>
+  </div>`);
+}
+
+function doDeleteCommittee(id){
+  const c=DATA.committees[id];
+  if(!c)return;
+  const confirmInput=document.getElementById('del-confirm-input').value.trim();
+  if(confirmInput!==c.name){toast('Committee name does not match — deletion cancelled','error');return}
+  // unassign members
+  DATA.users.forEach(u=>{if(u.committee===id)u.committee=null});
+  delete DATA.committees[id];
+  closeModal();toast(`${c.name} committee removed`,'error');
+  renderManageCommittees();setupSidebar();
+}
+
+// ═══════════════════════════════════════════════
+//  MODAL / TOAST / ZOOM
+// ═══════════════════════════════════════════════
+function openModal(html,extraClass=''){
+  const box=document.getElementById('modal-box');
+  box.className='modal '+(extraClass||'');
+  box.innerHTML=`<button class="modal-close" onclick="closeModal()">×</button>`+html;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open')}
+function toast(msg,type='info'){
+  const el=document.createElement('div');
+  const icons={success:'✓',error:'✗',info:'i',warn:'⚑'};
+  el.className=`toast toast-${type}`;
+  el.innerHTML=`<span>${icons[type]||'i'}</span>${msg}`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(()=>el.remove(),3500);
+}
+function zoomImg(src){
+  document.getElementById('img-zoom-img').src=src;
+  document.getElementById('img-zoom').classList.add('open');
+}
+</script>
+</body>
+</html>
