@@ -49,7 +49,7 @@ body{display:flex;flex-direction:column}
 body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");opacity:.4;pointer-events:none;z-index:0}
 
 /* ──────────── LOGIN ──────────── */
-#login-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:100;background:var(--navy)}
+#login-screen{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:100;background:var(--navy)}
 .login-glow{position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(201,168,76,.15) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
 .login-box{position:relative;z-index:1;width:400px;padding:48px 44px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);backdrop-filter:blur(20px)}
 .login-logo{display:flex;align-items:center;gap:10px;margin-bottom:36px}
@@ -265,6 +265,20 @@ tr:hover td{background:rgba(255,255,255,.02)}
 </head>
 <body>
 
+<!-- ═══════ LOADING SCREEN ═══════ -->
+<div id="loading-screen" style="position:fixed;inset:0;background:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999">
+  <div style="font-size:40px;margin-bottom:20px;animation:spin 2s linear infinite">🏛️</div>
+  <div style="font-size:22px;font-weight:800;margin-bottom:8px">Stuco<em style="font-style:normal;color:var(--gold)">Vault</em></div>
+  <div id="loading-msg" style="font-size:13px;color:var(--muted);margin-top:6px">Connecting to database…</div>
+  <div style="width:200px;height:3px;background:rgba(255,255,255,.06);border-radius:99px;margin-top:24px;overflow:hidden">
+    <div style="height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));border-radius:99px;animation:loadbar 1.5s ease-in-out infinite"></div>
+  </div>
+</div>
+<style>
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes loadbar{0%{width:0%;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0%;margin-left:100%}}
+</style>
+
 <!-- ═══════ LOGIN SCREEN ═══════ -->
 <div id="login-screen">
   <div class="login-glow"></div>
@@ -350,42 +364,139 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <div id="toast-container"></div>
 
-<script>
+<script type="module">
 // ═══════════════════════════════════════════════
-//  DATA STORE
+//  FIREBASE SETUP
 // ═══════════════════════════════════════════════
-const DATA = {
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, doc, getDocs, getDoc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAhF23yUTdoPP7_ZOE6z6FtOT8NZHUCgQI",
+  authDomain: "stucovault.firebaseapp.com",
+  projectId: "stucovault",
+  storageBucket: "stucovault.firebasestorage.app",
+  messagingSenderId: "429589360093",
+  appId: "1:429589360093:web:4509bd9a507547cf4d1a34"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+
+// ═══════════════════════════════════════════════
+//  LIVE DATA STORE (synced from Firestore)
+// ═══════════════════════════════════════════════
+const DATA = { users:[], committees:{}, transactions:[], reimbursements:[] };
+
+// Default seed data — only written once if Firestore is empty
+const SEED = {
   users:[
-    {id:'u1',username:'treasurer',password:'vault123',name:'Jordan Reyes',role:'treasurer',committee:null,color:'#c9a84c'},
-    {id:'u2',username:'supervisor',password:'vault123',name:'Morgan Blake',role:'supervisor',committee:null,color:'#4f9cf9'},
-    {id:'u3',username:'alice',password:'vault123',name:'Alice Chen',role:'member',committee:'sports',color:'#3ecf8e'},
-    {id:'u4',username:'ben',password:'vault123',name:'Ben Torres',role:'member',committee:'spirit',color:'#f5a623'},
-    {id:'u5',username:'carla',password:'vault123',name:'Carla Singh',role:'member',committee:'house',color:'#e05252'},
-    {id:'u6',username:'dan',password:'vault123',name:'Dan Park',role:'member',committee:'social',color:'#a78bfa'},
+    {id:'u1',username:'treasurer',password:'vault123',name:'Jordan Reyes',role:'treasurer',committee:null},
+    {id:'u2',username:'supervisor',password:'vault123',name:'Morgan Blake',role:'supervisor',committee:null},
+    {id:'u3',username:'alice',password:'vault123',name:'Alice Chen',role:'member',committee:'sports'},
+    {id:'u4',username:'ben',password:'vault123',name:'Ben Torres',role:'member',committee:'spirit'},
+    {id:'u5',username:'carla',password:'vault123',name:'Carla Singh',role:'member',committee:'house'},
+    {id:'u6',username:'dan',password:'vault123',name:'Dan Park',role:'member',committee:'social'},
   ],
-  committees:{
-    sports:{id:'sports',name:'Sports',icon:'🏅',allocated:3000,balance:1750,color:'blue'},
-    spirit:{id:'spirit',name:'Spirit',icon:'🎉',allocated:2500,balance:1900,color:'gold'},
-    house:{id:'house',name:'House',icon:'🏠',allocated:2000,balance:1200,color:'green'},
-    social:{id:'social',name:'Social',icon:'🎊',allocated:2800,balance:980,color:'orange'},
-  },
+  committees:[
+    {id:'sports',name:'Sports',icon:'🏅',allocated:3000,balance:1750,color:'blue'},
+    {id:'spirit',name:'Spirit',icon:'🎉',allocated:2500,balance:1900,color:'gold'},
+    {id:'house',name:'House',icon:'🏠',allocated:2000,balance:1200,color:'green'},
+    {id:'social',name:'Social',icon:'🎊',allocated:2800,balance:980,color:'orange'},
+  ],
   transactions:[
     {id:'t1',desc:'Trophy purchase',amount:320,committee:'sports',date:'2025-04-01',type:'expense',createdBy:'u3',status:'approved',approvedBy:'u1',approvedDate:'2025-04-02'},
     {id:'t2',desc:'Spirit kits printing',amount:450,committee:'spirit',date:'2025-04-03',type:'expense',createdBy:'u4',status:'pending',approvedBy:null,approvedDate:null},
     {id:'t3',desc:'Ticket sales — House event',amount:600,committee:'house',date:'2025-04-04',type:'revenue',createdBy:'u5',status:'approved',approvedBy:'u2',approvedDate:'2025-04-05'},
-    {id:'t4',desc:'Social mixer food',amount:280,committee:'social',date:'2025-04-05',type:'expense',createdBy:'u6',status:'pending',approvedBy:null,approvedDate:null},
-    {id:'t5',desc:'Sports equipment',amount:540,committee:'sports',date:'2025-04-06',type:'expense',createdBy:'u3',status:'rejected',approvedBy:'u1',approvedDate:'2025-04-07'},
-    {id:'t6',desc:'Sponsorship received',amount:800,committee:'spirit',date:'2025-04-07',type:'revenue',createdBy:'u2',status:'approved',approvedBy:'u1',approvedDate:'2025-04-08'},
   ],
   reimbursements:[
-    {id:'r1',amount:75,reason:'Bus fare for away game',committee:'sports',requestedBy:'u3',date:'2025-04-02',status:'pending',receipts:[],receiptNames:[]},
-    {id:'r2',amount:1500,reason:'External venue hire — large event',committee:'spirit',requestedBy:'u4',date:'2025-04-04',status:'pending',receipts:[],receiptNames:[],flagged:true},
-    {id:'r3',amount:45,reason:'Printing supplies',committee:'house',requestedBy:'u5',date:'2025-04-05',status:'approved',receipts:['data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzFhMjIzNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjYzlhODRjIiBmb250LXNpemU9IjE0IiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+UmVjZWlwdCBJbWFnZTwvdGV4dD48L3N2Zz4='],receiptNames:['receipt_printing.jpg'],approvedBy:'u1',approvedDate:'2025-04-06'},
+    {id:'r1',amount:75,reason:'Bus fare for away game',committee:'sports',requestedBy:'u3',date:'2025-04-02',status:'pending',receipts:[],receiptNames:[],flagged:false},
   ],
 };
 
 let currentUser = null;
 let currentPage = 'dashboard';
+let dbReady = false;
+
+// ── Show loading screen while Firebase loads ──
+function showLoading(msg='Loading StucoVault…'){
+  document.getElementById('loading-screen').style.display='flex';
+  document.getElementById('loading-msg').textContent=msg;
+}
+function hideLoading(){
+  document.getElementById('loading-screen').style.display='none';
+}
+
+// ── Seed Firestore with default data if empty ──
+async function seedIfEmpty(){
+  const usersSnap = await getDocs(collection(db,'users'));
+  if(!usersSnap.empty) return; // already seeded
+  showLoading('Setting up your database for the first time…');
+  for(const u of SEED.users) await setDoc(doc(db,'users',u.id),u);
+  for(const c of SEED.committees) await setDoc(doc(db,'committees',c.id),c);
+  for(const t of SEED.transactions) await setDoc(doc(db,'transactions',t.id),t);
+  for(const r of SEED.reimbursements) await setDoc(doc(db,'reimbursements',r.id),r);
+}
+
+// ── Load all data from Firestore into DATA ──
+async function loadAllData(){
+  const [usersSnap,committeesSnap,txSnap,rmSnap] = await Promise.all([
+    getDocs(collection(db,'users')),
+    getDocs(collection(db,'committees')),
+    getDocs(collection(db,'transactions')),
+    getDocs(collection(db,'reimbursements')),
+  ]);
+  DATA.users = usersSnap.docs.map(d=>({...d.data(),id:d.id}));
+  DATA.committees = {};
+  committeesSnap.docs.forEach(d=>{ DATA.committees[d.id]={...d.data(),id:d.id}; });
+  DATA.transactions = txSnap.docs.map(d=>({...d.data(),id:d.id}));
+  DATA.reimbursements = rmSnap.docs.map(d=>({...d.data(),id:d.id}));
+}
+
+// ── Set up real-time listeners so all tabs stay in sync ──
+function setupListeners(){
+  onSnapshot(collection(db,'users'),snap=>{
+    DATA.users=snap.docs.map(d=>({...d.data(),id:d.id}));
+    if(currentUser){ currentUser=DATA.users.find(u=>u.id===currentUser.id)||currentUser; }
+    if(dbReady){ setupSidebar(); if(currentPage)navigateTo(currentPage); }
+  });
+  onSnapshot(collection(db,'committees'),snap=>{
+    DATA.committees={};
+    snap.docs.forEach(d=>{ DATA.committees[d.id]={...d.data(),id:d.id}; });
+    if(dbReady&&currentPage)navigateTo(currentPage);
+  });
+  onSnapshot(collection(db,'transactions'),snap=>{
+    DATA.transactions=snap.docs.map(d=>({...d.data(),id:d.id}));
+    if(dbReady&&currentPage)navigateTo(currentPage);
+  });
+  onSnapshot(collection(db,'reimbursements'),snap=>{
+    DATA.reimbursements=snap.docs.map(d=>({...d.data(),id:d.id}));
+    if(dbReady&&currentPage)navigateTo(currentPage);
+  });
+}
+
+// ── Firestore write helpers ──
+async function dbSet(col,id,data){ await setDoc(doc(db,col,id),data); }
+async function dbUpdate(col,id,data){ await updateDoc(doc(db,col,id),data); }
+async function dbAdd(col,data){ const ref=await addDoc(collection(db,col),data); return ref.id; }
+async function dbDelete(col,id){ await deleteDoc(doc(db,col,id)); }
+
+// ── Bootstrap ──
+async function init(){
+  showLoading('Connecting to database…');
+  try{
+    await seedIfEmpty();
+    await loadAllData();
+    setupListeners();
+    dbReady=true;
+    hideLoading();
+    document.getElementById('login-screen').style.display='flex';
+  } catch(e){
+    console.error(e);
+    document.getElementById('loading-msg').textContent='⚠️ Could not connect to database. Check your internet connection.';
+  }
+}
+init();
 
 // ═══════════════════════════════════════════════
 //  HELPERS
@@ -444,6 +555,7 @@ function doLogin(){
 }
 function doLogout(){
   currentUser=null;
+  currentPage='dashboard';
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('app').style.display='none';
   document.getElementById('login-username').value='';
@@ -664,26 +776,23 @@ function filterTx(status){
   const tbody=document.getElementById('tx-tbody');
   if(tbody) tbody.innerHTML=txs.map(t=>txRow(t,canAct)).join('');
 }
-function approveTransaction(id){
+async function approveTransaction(id){
   const t=DATA.transactions.find(x=>x.id===id);
   if(!t)return;
   if(t.type==='expense'){
     const c=DATA.committees[t.committee];
     if(c.balance<t.amount){toast('Insufficient committee balance','error');return}
-    c.balance-=t.amount;
+    await dbUpdate('committees',t.committee,{balance:c.balance-t.amount});
   } else {
-    DATA.committees[t.committee].balance+=t.amount;
+    const c=DATA.committees[t.committee];
+    await dbUpdate('committees',t.committee,{balance:c.balance+t.amount});
   }
-  t.status='approved';t.approvedBy=currentUser.id;t.approvedDate=today();
+  await dbUpdate('transactions',id,{status:'approved',approvedBy:currentUser.id,approvedDate:today()});
   toast('Transaction approved','success');
-  renderTransactions();setupSidebar();
 }
-function rejectTransaction(id){
-  const t=DATA.transactions.find(x=>x.id===id);
-  if(!t)return;
-  t.status='rejected';t.approvedBy=currentUser.id;t.approvedDate=today();
+async function rejectTransaction(id){
+  await dbUpdate('transactions',id,{status:'rejected',approvedBy:currentUser.id,approvedDate:today()});
   toast('Transaction rejected','error');
-  renderTransactions();setupSidebar();
 }
 
 // ── REIMBURSEMENTS ──
@@ -730,23 +839,19 @@ function rmCard(r,canAct){
     </div>`:''}
   </div>`;
 }
-function approveReimbursement(id){
+async function approveReimbursement(id){
   const r=DATA.reimbursements.find(x=>x.id===id);
   if(!r)return;
   if(!r.receipts||r.receipts.length===0){toast('Cannot approve without receipt evidence','error');return}
   const c=DATA.committees[r.committee];
   if(c.balance<r.amount){toast('Insufficient committee balance','error');return}
-  c.balance-=r.amount;
-  r.status='approved';r.approvedBy=currentUser.id;r.approvedDate=today();
+  await dbUpdate('committees',r.committee,{balance:c.balance-r.amount});
+  await dbUpdate('reimbursements',id,{status:'approved',approvedBy:currentUser.id,approvedDate:today()});
   toast('Reimbursement approved','success');
-  renderReimbursements();setupSidebar();
 }
-function rejectReimbursement(id){
-  const r=DATA.reimbursements.find(x=>x.id===id);
-  if(!r)return;
-  r.status='rejected';r.approvedBy=currentUser.id;r.approvedDate=today();
+async function rejectReimbursement(id){
+  await dbUpdate('reimbursements',id,{status:'rejected',approvedBy:currentUser.id,approvedDate:today()});
   toast('Reimbursement rejected','error');
-  renderReimbursements();setupSidebar();
 }
 
 // ── COMMITTEES ──
@@ -892,11 +997,10 @@ function renderMembers(){
     </div>
   </div>`;
 }
-function removeMember(id){
-  if(!confirm('Remove this member from the system?'))return;
-  const idx=DATA.users.findIndex(u=>u.id===id);
-  if(idx>-1)DATA.users.splice(idx,1);
-  toast('Member removed','error');renderMembers();
+async function removeMember(id){
+  if(!confirm('Remove this user from the system?'))return;
+  await dbDelete('users',id);
+  toast('User removed','error');
 }
 function openTransferMember(id){
   const m=DATA.users.find(u=>u.id===id);
@@ -914,10 +1018,11 @@ function openTransferMember(id){
     <button class="btn btn-gold btn-sm" onclick="doTransfer('${m.id}')">Transfer</button>
   </div>`);
 }
-function doTransfer(id){
+async function doTransfer(id){
   const m=DATA.users.find(u=>u.id===id);
   const nc=document.getElementById('transfer-committee').value;
-  m.committee=nc;closeModal();toast(`${m.name} transferred to ${DATA.committees[nc].name}`,'success');renderMembers();
+  await dbUpdate('users',id,{committee:nc});
+  closeModal();toast(`${m.name} transferred to ${DATA.committees[nc].name}`,'success');
 }
 function openAddMember(){
   openModal(`<div class="modal-title">Add New User</div>
@@ -960,7 +1065,7 @@ function toggleCommitteeField(role){
   if(cg)cg.style.display=role==='supervisor'?'none':'flex';
   if(sn)sn.style.display=role==='supervisor'?'block':'none';
 }
-function doAddMember(){
+async function doAddMember(){
   const name=document.getElementById('nm-name').value.trim();
   const user=document.getElementById('nm-user').value.trim();
   const pass=document.getElementById('nm-pass').value;
@@ -969,10 +1074,10 @@ function doAddMember(){
   const err=document.getElementById('nm-err');
   if(!name||!user||!pass){err.textContent='All fields required.';err.style.display='block';return}
   if(DATA.users.find(u=>u.username===user)){err.textContent='Username already taken.';err.style.display='block';return}
-  DATA.users.push({id:genId(),username:user,password:pass,name,role,committee,color:'#a78bfa'});
+  const newId=genId();
+  await dbSet('users',newId,{id:newId,username:user,password:pass,name,role,committee});
   closeModal();
   toast(`${role==='supervisor'?'Supervisor':'Member'} "${name}" added`,'success');
-  renderMembers();setupSidebar();
 }
 
 // ── ACCOUNT ──
@@ -1003,17 +1108,17 @@ function renderAccount(){
     </div>
   </div>`;
 }
-function saveProfile(){
+async function saveProfile(){
   const name=document.getElementById('acc-name').value.trim();
   const username=document.getElementById('acc-username').value.trim();
   const err=document.getElementById('acc-err');
   if(!name||!username){err.textContent='Name and username required.';err.style.display='block';return}
   if(username!==currentUser.username&&DATA.users.find(u=>u.username===username&&u.id!==currentUser.id)){err.textContent='Username already taken.';err.style.display='block';return}
   err.style.display='none';
-  currentUser.name=name;currentUser.username=username;
-  toast('Profile updated','success');setupSidebar();
+  await dbUpdate('users',currentUser.id,{name,username});
+  toast('Profile updated','success');
 }
-function changePassword(){
+async function changePassword(){
   const old=document.getElementById('pw-old').value;
   const nw=document.getElementById('pw-new').value;
   const conf=document.getElementById('pw-confirm').value;
@@ -1022,7 +1127,7 @@ function changePassword(){
   if(!nw||nw.length<4){err.textContent='New password must be at least 4 characters.';err.style.display='block';return}
   if(nw!==conf){err.textContent='Passwords do not match.';err.style.display='block';return}
   err.style.display='none';
-  currentUser.password=nw;
+  await dbUpdate('users',currentUser.id,{password:nw});
   toast('Password updated successfully','success');
   document.getElementById('pw-old').value='';document.getElementById('pw-new').value='';document.getElementById('pw-confirm').value='';
 }
@@ -1052,7 +1157,7 @@ function openNewTransaction(){
     <button class="btn btn-gold btn-sm" onclick="submitTransaction()">Submit Transaction</button>
   </div>`);
 }
-function submitTransaction(){
+async function submitTransaction(){
   const desc=document.getElementById('nt-desc').value.trim();
   const amount=parseFloat(document.getElementById('nt-amount').value);
   const type=document.getElementById('nt-type').value;
@@ -1064,15 +1169,12 @@ function submitTransaction(){
   if(!desc){de.style.display='block';ok=false}
   if(!amount||amount<=0){ae.style.display='block';ok=false}
   if(!ok)return;
-  // duplicate check
   if(DATA.transactions.find(t=>t.desc===desc&&t.amount===amount&&t.committee===committee&&t.date===date)){
     toast('Duplicate transaction detected','error');return;
   }
-  DATA.transactions.push({id:genId(),desc,amount,committee,date,type,createdBy:currentUser.id,status:'pending',approvedBy:null,approvedDate:null});
+  const newTx={desc,amount,committee,date,type,createdBy:currentUser.id,status:'pending',approvedBy:null,approvedDate:null};
+  await dbAdd('transactions',newTx);
   closeModal();toast('Transaction submitted for review','success');
-  if(currentPage==='transactions')renderTransactions();
-  else if(currentPage==='dashboard')renderDashboard();
-  setupSidebar();
 }
 
 // ═══════════════════════════════════════════════
@@ -1133,7 +1235,7 @@ function updateReceiptPreviews(){
 function removeReceipt(i){
   rmReceipts.splice(i,1);rmReceiptNames.splice(i,1);updateReceiptPreviews();
 }
-function submitReimbursement(){
+async function submitReimbursement(){
   const amount=parseFloat(document.getElementById('rm-amount').value);
   const reason=document.getElementById('rm-reason').value.trim();
   const committee=document.getElementById('rm-committee').value;
@@ -1144,12 +1246,11 @@ function submitReimbursement(){
   if(!reason){re.style.display='block';ok=false}
   if(!ok)return;
   const flagged=amount>500;
-  DATA.reimbursements.push({id:genId(),amount,reason,committee,requestedBy:currentUser.id,date:today(),status:'pending',receipts:[...rmReceipts],receiptNames:[...rmReceiptNames],flagged,approvedBy:null,approvedDate:null});
+  const newRm={amount,reason,committee,requestedBy:currentUser.id,date:today(),status:'pending',receipts:[...rmReceipts],receiptNames:[...rmReceiptNames],flagged,approvedBy:null,approvedDate:null};
+  await dbAdd('reimbursements',newRm);
   closeModal();
   if(flagged)toast('Request submitted — flagged for large amount review','warn');
   else toast('Reimbursement request submitted','success');
-  if(currentPage==='reimbursements')renderReimbursements();
-  setupSidebar();
 }
 
 // ═══════════════════════════════════════════════
@@ -1277,9 +1378,9 @@ function doAddCommittee(){
   if(!allocated||allocated<=0){document.getElementById('ac-alloc-err').style.display='block';ok=false}
   if(isNaN(balance)||balance<0||balance>allocated){document.getElementById('ac-bal-err').style.display='block';ok=false}
   if(!ok)return;
-  DATA.committees[id]={id,name,icon,allocated,balance,color};
-  closeModal();toast(`${icon} ${name} committee added`,'success');
-  renderManageCommittees();setupSidebar();
+  dbSet('committees',id,{id,name,icon,allocated,balance,color})
+    .then(()=>{ closeModal();toast(`${icon} ${name} committee added`,'success'); })
+    .catch(()=>toast('Failed to save committee','error'));
 }
 
 function openEditCommittee(id){
@@ -1346,9 +1447,9 @@ function doEditCommittee(id){
   if(!allocated||allocated<=0){document.getElementById('ec-alloc-err').style.display='block';ok=false}
   if(isNaN(balance)||balance<0||balance>allocated){document.getElementById('ec-bal-err').style.display='block';ok=false}
   if(!ok)return;
-  c.name=name;c.allocated=allocated;c.balance=balance;c.icon=icon;c.color=color;
-  closeModal();toast(`${icon} ${name} updated`,'success');
-  renderManageCommittees();
+  dbUpdate('committees',id,{name,allocated,balance,icon,color})
+    .then(()=>{ closeModal();toast(`${icon} ${name} updated`,'success'); })
+    .catch(()=>toast('Failed to update committee','error'));
 }
 
 function confirmDeleteCommittee(id){
@@ -1398,11 +1499,12 @@ function doDeleteCommittee(id){
   if(!c)return;
   const confirmInput=document.getElementById('del-confirm-input').value.trim();
   if(confirmInput!==c.name){toast('Committee name does not match — deletion cancelled','error');return}
-  // unassign members
-  DATA.users.forEach(u=>{if(u.committee===id)u.committee=null});
-  delete DATA.committees[id];
-  closeModal();toast(`${c.name} committee removed`,'error');
-  renderManageCommittees();setupSidebar();
+  const membersInCommittee=DATA.users.filter(u=>u.committee===id);
+  const unassignAll=membersInCommittee.map(u=>dbUpdate('users',u.id,{committee:null}));
+  Promise.all(unassignAll)
+    .then(()=>dbDelete('committees',id))
+    .then(()=>{ closeModal();toast(`${c.name} committee removed`,'error'); })
+    .catch(()=>toast('Failed to remove committee','error'));
 }
 
 // ═══════════════════════════════════════════════
@@ -1427,6 +1529,23 @@ function zoomImg(src){
   document.getElementById('img-zoom-img').src=src;
   document.getElementById('img-zoom').classList.add('open');
 }
+
+// expose functions needed by inline HTML onclick handlers
+window.doLogin=doLogin;window.doLogout=doLogout;window.fillDemo=fillDemo;
+window.navigateTo=navigateTo;window.closeModal=closeModal;window.zoomImg=zoomImg;
+window.openNewTransaction=openNewTransaction;window.submitTransaction=submitTransaction;
+window.openNewReimbursement=openNewReimbursement;window.submitReimbursement=submitReimbursement;
+window.approveTransaction=approveTransaction;window.rejectTransaction=rejectTransaction;
+window.approveReimbursement=approveReimbursement;window.rejectReimbursement=rejectReimbursement;
+window.openAddMember=openAddMember;window.doAddMember=doAddMember;
+window.removeMember=removeMember;window.openTransferMember=openTransferMember;window.doTransfer=doTransfer;
+window.toggleCommitteeField=toggleCommitteeField;
+window.openAddCommittee=openAddCommittee;window.doAddCommittee=doAddCommittee;
+window.openEditCommittee=openEditCommittee;window.doEditCommittee=doEditCommittee;
+window.confirmDeleteCommittee=confirmDeleteCommittee;window.doDeleteCommittee=doDeleteCommittee;
+window.saveProfile=saveProfile;window.changePassword=changePassword;
+window.filterTx=filterTx;window.handleReceiptUpload=handleReceiptUpload;
+window.removeReceipt=removeReceipt;
 </script>
 </body>
 </html>
