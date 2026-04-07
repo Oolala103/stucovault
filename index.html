@@ -386,7 +386,7 @@ const db = getFirestore(firebaseApp);
 // ═══════════════════════════════════════════════
 //  LIVE DATA STORE (synced from Firestore)
 // ═══════════════════════════════════════════════
-const DATA = { users:[], committees:{}, transactions:[], reimbursements:[] };
+const DATA = { users:[], committees:{}, transactions:[], reimbursements:[], cashCounter:null };
 
 // Default seed data — only written once if Firestore is empty
 const SEED = {
@@ -440,17 +440,19 @@ async function seedIfEmpty(){
 
 // ── Load all data from Firestore into DATA ──
 async function loadAllData(){
-  const [usersSnap,committeesSnap,txSnap,rmSnap] = await Promise.all([
+  const [usersSnap,committeesSnap,txSnap,rmSnap,ccSnap] = await Promise.all([
     getDocs(collection(db,'users')),
     getDocs(collection(db,'committees')),
     getDocs(collection(db,'transactions')),
     getDocs(collection(db,'reimbursements')),
+    getDocs(collection(db,'cashcounter')),
   ]);
   DATA.users = usersSnap.docs.map(d=>({...d.data(),id:d.id}));
   DATA.committees = {};
   committeesSnap.docs.forEach(d=>{ DATA.committees[d.id]={...d.data(),id:d.id}; });
   DATA.transactions = txSnap.docs.map(d=>({...d.data(),id:d.id}));
   DATA.reimbursements = rmSnap.docs.map(d=>({...d.data(),id:d.id}));
+  if(!ccSnap.empty) DATA.cashCounter={...ccSnap.docs[0].data(),id:ccSnap.docs[0].id};
 }
 
 // ── Set up real-time listeners so all tabs stay in sync ──
@@ -472,6 +474,11 @@ function setupListeners(){
   onSnapshot(collection(db,'reimbursements'),snap=>{
     DATA.reimbursements=snap.docs.map(d=>({...d.data(),id:d.id}));
     if(dbReady&&currentPage)navigateTo(currentPage);
+  });
+  onSnapshot(collection(db,'cashcounter'),snap=>{
+    if(!snap.empty) DATA.cashCounter={...snap.docs[0].data(),id:snap.docs[0].id};
+    else DATA.cashCounter=null;
+    if(dbReady&&currentPage==='cashcounter')navigateTo('cashcounter');
   });
 }
 
@@ -503,7 +510,7 @@ init();
 // ═══════════════════════════════════════════════
 function getUserById(id){return DATA.users.find(u=>u.id===id)}
 function getCommittee(id){return DATA.committees[id]}
-function money(n){return'$'+Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',')}
+function money(n){return Number(n).toLocaleString('fr-FR')+' CFA'}
 function formatDate(d){if(!d)return'—';const[y,m,day]=d.split('-');const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return`${months[parseInt(m)-1]} ${parseInt(day)}, ${y}`}
 function genId(){return'x'+Math.random().toString(36).slice(2,8)}
 function today(){return new Date().toISOString().slice(0,10)}
@@ -584,7 +591,8 @@ function setupSidebar(){
   <div class="nav-item" onclick="navigateTo('transactions')"><span class="nav-icon">↔</span>Transactions${can('approve_transaction')?`<span class="nav-badge">${DATA.transactions.filter(t=>t.status==='pending').length}</span>`:''}</div>
   <div class="nav-item" onclick="navigateTo('reimbursements')"><span class="nav-icon">⟳</span>Reimbursements${can('approve_reimbursement')?`<span class="nav-badge">${DATA.reimbursements.filter(r=>r.status==='pending').length}</span>`:''}</div>
   <div class="nav-item" onclick="navigateTo('committees')"><span class="nav-icon">◈</span>Committees</div>
-  <div class="nav-item" onclick="navigateTo('transparency')"><span class="nav-icon">◎</span>Transparency</div>`;
+  <div class="nav-item" onclick="navigateTo('transparency')"><span class="nav-icon">◎</span>Transparency</div>
+  ${can('view_all')?`<div class="nav-item" onclick="navigateTo('cashcounter')"><span class="nav-icon">💵</span>Cash Counter</div>`:''}`;
   if(can('manage_members')){
     nav+=`<div class="nav-section">Management</div>
     <div class="nav-item" onclick="navigateTo('members')"><span class="nav-icon">◻</span>Members</div>
@@ -609,7 +617,7 @@ function navigateTo(page){
   const titles={
     dashboard:'Dashboard',transactions:'Transactions',reimbursements:'Reimbursements',
     committees:'Committees',transparency:'Transparency',members:'Member Management',
-    manage_committees:'Committee Management',account:'My Account'
+    manage_committees:'Committee Management',account:'My Account',cashcounter:'Cash Counter'
   };
   const subs={
     dashboard:`Welcome back, ${currentUser.name}`,
@@ -619,7 +627,8 @@ function navigateTo(page){
     transparency:'Financial overview',
     members:'Manage council members',
     manage_committees:'Add, edit or remove committees',
-    account:'Your profile and security settings'
+    account:'Your profile and security settings',
+    cashcounter:'Count and verify physical CFA bills'
   };
   document.getElementById('top-title').textContent=titles[page];
   document.getElementById('top-sub').textContent=subs[page]||'';
@@ -632,6 +641,7 @@ function navigateTo(page){
     members:renderMembers,
     manage_committees:renderManageCommittees,
     account:renderAccount,
+    cashcounter:renderCashCounter,
   };
   (pages[page]||renderDashboard)();
 }
@@ -662,7 +672,8 @@ function renderDashboard(){
                 <button class="btn btn-ghost btn-sm" onclick="openNewReimbursement()">+ Request Reimbursement</button>`;
   }
   if(can('approve_transaction')){
-    topActions=`<button class="btn btn-gold btn-sm" onclick="navigateTo('transactions')">Review Pending (${pendingTx.length})</button>`;
+    topActions=`<button class="btn btn-gold btn-sm" onclick="openNewTransaction()">+ Log Transaction</button>
+                <button class="btn btn-ghost btn-sm" onclick="navigateTo('transactions')">Review Pending (${pendingTx.length})</button>`;
   }
   document.getElementById('top-actions').innerHTML=topActions;
 
@@ -732,6 +743,7 @@ function renderTransactions(){
 
   let topActions='';
   if(currentUser.role==='member') topActions=`<button class="btn btn-gold btn-sm" onclick="openNewTransaction()">+ New Transaction</button>`;
+  if(can('approve_transaction')) topActions=`<button class="btn btn-gold btn-sm" onclick="openNewTransaction()">+ Log Transaction</button>`;
   document.getElementById('top-actions').innerHTML=topActions;
 
   document.getElementById('page-content').innerHTML=`
@@ -1136,33 +1148,38 @@ async function changePassword(){
 //  NEW TRANSACTION MODAL
 // ═══════════════════════════════════════════════
 function openNewTransaction(){
-  const committeeOptions=currentUser.role==='member'
-    ?`<option value="${currentUser.committee}">${DATA.committees[currentUser.committee]?.icon} ${DATA.committees[currentUser.committee]?.name}</option>`
-    :Object.values(DATA.committees).map(c=>`<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
-  openModal(`<div class="modal-title">New Transaction</div>
-  <div class="modal-sub">Record a new expense or revenue</div>
+  const canSelectAll=can('view_all');
+  const committeeOptions=canSelectAll
+    ?Object.values(DATA.committees).map(c=>`<option value="${c.id}">${c.icon} ${c.name}</option>`).join('')
+    :`<option value="${currentUser.committee}">${DATA.committees[currentUser.committee]?.icon} ${DATA.committees[currentUser.committee]?.name}</option>`;
+  const isAdminLogging=can('approve_transaction');
+  openModal(`<div class="modal-title">${isAdminLogging?'Log Transaction':'New Transaction'}</div>
+  <div class="modal-sub">${isAdminLogging?'Directly record an approved transaction':'Submit a transaction for review'}</div>
   <div class="form-grid">
     <div class="form-group"><label>Description</label><input id="nt-desc" placeholder="What was this transaction for?"/><p class="form-error" id="nt-desc-err">Description is required</p></div>
     <div class="form-row">
-      <div class="form-group"><label>Amount ($)</label><input type="number" id="nt-amount" placeholder="0.00" min="0.01" step="0.01"/><p class="form-error" id="nt-amount-err">Valid amount required</p></div>
+      <div class="form-group"><label>Amount (CFA)</label><input type="number" id="nt-amount" placeholder="0" min="1" step="1"/><p class="form-error" id="nt-amount-err">Valid amount required</p></div>
       <div class="form-group"><label>Type</label><select id="nt-type"><option value="expense">Expense</option><option value="revenue">Revenue</option></select></div>
     </div>
     <div class="form-row">
       <div class="form-group"><label>Committee</label><select id="nt-committee">${committeeOptions}</select></div>
       <div class="form-group"><label>Date</label><input type="date" id="nt-date" value="${today()}"/></div>
     </div>
+    ${isAdminLogging?`<div class="form-group"><label>Status</label><select id="nt-status"><option value="approved">Approved (direct log)</option><option value="pending">Pending (submit for review)</option></select></div>`:''}
   </div>
   <div class="form-actions" style="margin-top:16px">
     <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
-    <button class="btn btn-gold btn-sm" onclick="submitTransaction()">Submit Transaction</button>
+    <button class="btn btn-gold btn-sm" onclick="submitTransaction()">Submit</button>
   </div>`);
 }
 async function submitTransaction(){
   const desc=document.getElementById('nt-desc').value.trim();
-  const amount=parseFloat(document.getElementById('nt-amount').value);
+  const amount=parseInt(document.getElementById('nt-amount').value);
   const type=document.getElementById('nt-type').value;
   const committee=document.getElementById('nt-committee').value;
   const date=document.getElementById('nt-date').value;
+  const statusEl=document.getElementById('nt-status');
+  const status=statusEl?statusEl.value:'pending';
   let ok=true;
   const de=document.getElementById('nt-desc-err'),ae=document.getElementById('nt-amount-err');
   de.style.display='none';ae.style.display='none';
@@ -1172,9 +1189,20 @@ async function submitTransaction(){
   if(DATA.transactions.find(t=>t.desc===desc&&t.amount===amount&&t.committee===committee&&t.date===date)){
     toast('Duplicate transaction detected','error');return;
   }
-  const newTx={desc,amount,committee,date,type,createdBy:currentUser.id,status:'pending',approvedBy:null,approvedDate:null};
+  const isDirectLog=status==='approved';
+  if(isDirectLog){
+    const c=DATA.committees[committee];
+    if(type==='expense'&&c.balance<amount){toast('Insufficient committee balance','error');return}
+    const newBal=type==='expense'?c.balance-amount:c.balance+amount;
+    await dbUpdate('committees',committee,{balance:newBal});
+  }
+  const newTx={desc,amount,committee,date,type,createdBy:currentUser.id,
+    status:isDirectLog?'approved':'pending',
+    approvedBy:isDirectLog?currentUser.id:null,
+    approvedDate:isDirectLog?today():null};
   await dbAdd('transactions',newTx);
-  closeModal();toast('Transaction submitted for review','success');
+  closeModal();
+  toast(isDirectLog?'Transaction logged and approved':'Transaction submitted for review','success');
 }
 
 // ═══════════════════════════════════════════════
@@ -1190,7 +1218,7 @@ function openNewReimbursement(){
   <div class="modal-sub">Submit a reimbursement with receipt evidence</div>
   <div class="form-grid">
     <div class="form-row">
-      <div class="form-group"><label>Amount ($)</label><input type="number" id="rm-amount" placeholder="0.00" min="0.01" step="0.01"/><p class="form-error" id="rm-amount-err">Valid amount required</p></div>
+      <div class="form-group"><label>Amount (CFA)</label><input type="number" id="rm-amount" placeholder="0" min="1" step="1"/><p class="form-error" id="rm-amount-err">Valid amount required</p></div>
       <div class="form-group"><label>Committee</label><select id="rm-committee">${committeeOptions}</select></div>
     </div>
     <div class="form-group"><label>Reason</label><textarea id="rm-reason" placeholder="Describe what this reimbursement is for..."></textarea><p class="form-error" id="rm-reason-err">Reason is required</p></div>
@@ -1236,7 +1264,7 @@ function removeReceipt(i){
   rmReceipts.splice(i,1);rmReceiptNames.splice(i,1);updateReceiptPreviews();
 }
 async function submitReimbursement(){
-  const amount=parseFloat(document.getElementById('rm-amount').value);
+  const amount=parseInt(document.getElementById('rm-amount').value);
   const reason=document.getElementById('rm-reason').value.trim();
   const committee=document.getElementById('rm-committee').value;
   let ok=true;
@@ -1506,6 +1534,202 @@ function doDeleteCommittee(id){
     .then(()=>{ closeModal();toast(`${c.name} committee removed`,'error'); })
     .catch(()=>toast('Failed to remove committee','error'));
 }
+
+// ═══════════════════════════════════════════════
+//  CASH COUNTER
+// ═══════════════════════════════════════════════
+const CFA_BILLS=[10000,5000,2000,1000,500,100];
+
+function renderCashCounter(){
+  if(!can('view_all')){toast('Access denied','error');navigateTo('dashboard');return}
+  document.getElementById('top-actions').innerHTML=`<button class="btn btn-gold btn-sm" onclick="saveCashCounter()">💾 Save Count</button>`;
+  const cc=DATA.cashCounter||{bills:{},verifiedBills:{},lastSaved:null,savedBy:null};
+  const totalAllBalances=Object.values(DATA.committees).reduce((s,c)=>s+c.balance,0);
+  const countedTotal=CFA_BILLS.reduce((s,d)=>{
+    const qty=parseInt(cc.bills?.[d]||0);
+    return s+(qty*d);
+  },0);
+  const diff=countedTotal-totalAllBalances;
+  const match=diff===0;
+  const saver=cc.savedBy?DATA.users.find(u=>u.id===cc.savedBy):null;
+
+  document.getElementById('page-content').innerHTML=`
+  <div class="stats-grid" style="margin-bottom:24px">
+    <div class="stat-card gold">
+      <div class="stat-icon">💵</div>
+      <div class="stat-label">Counted Total</div>
+      <div class="stat-value gold mono" id="cc-counted-total">${money(countedTotal)}</div>
+      <div class="stat-sub">from physical bill count</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-icon">🏦</div>
+      <div class="stat-label">System Balance</div>
+      <div class="stat-value blue mono">${money(totalAllBalances)}</div>
+      <div class="stat-sub">total across all committees</div>
+    </div>
+    <div class="stat-card ${match?'green':'red'}">
+      <div class="stat-icon">${match?'✅':'⚠️'}</div>
+      <div class="stat-label">Difference</div>
+      <div class="stat-value ${match?'green':'red'} mono" id="cc-diff">${diff===0?'Balanced':money(Math.abs(diff))}</div>
+      <div class="stat-sub">${match?'Cash matches system':'${diff>0?"Surplus":"Shortfall"} detected'}</div>
+    </div>
+    <div class="stat-card ${match?'green':'red'}">
+      <div class="stat-icon">${match?'🟢':'🔴'}</div>
+      <div class="stat-label">Status</div>
+      <div class="stat-value" style="font-size:16px;color:var(--${match?'green':'red'})">${match?'✓ MATCH':'✗ MISMATCH'}</div>
+      <div class="stat-sub">${cc.lastSaved?`Last saved ${formatDate(cc.lastSaved)}${saver?' by '+saver.name:''}`:' Not yet saved'}</div>
+    </div>
+  </div>
+
+  ${!match&&countedTotal>0?`<div class="alert alert-warn" style="margin-bottom:16px">
+    ⚑ <strong>Mismatch detected!</strong> The physical cash count (${money(countedTotal)}) does not match the system balance (${money(totalAllBalances)}). 
+    Difference: <strong>${diff>0?'+':''}${money(diff)}</strong>. Please recount and verify.
+  </div>`:''}
+
+  <div class="card">
+    <div class="card-title"><span>💵</span> Bill Count — Enter quantities for each denomination</div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Bill Denomination</th>
+            <th>Quantity Counted</th>
+            <th>Total Value</th>
+            <th>Verified?</th>
+          </tr>
+        </thead>
+        <tbody id="cc-tbody">
+          ${CFA_BILLS.map(d=>{
+            const qty=cc.bills?.[d]||0;
+            const verified=cc.verifiedBills?.[d]||false;
+            const total=qty*d;
+            return`<tr id="cc-row-${d}">
+              <td><span style="font-size:15px;font-weight:800;font-family:'DM Mono',monospace">${d.toLocaleString('fr-FR')} CFA</span></td>
+              <td>
+                <input type="number" min="0" step="1" value="${qty}"
+                  style="width:100px;padding:8px 10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:6px;color:var(--white);font-family:'DM Mono',monospace;font-size:14px;outline:none"
+                  oninput="updateBillRow(${d},this.value)"
+                  id="cc-qty-${d}"/>
+              </td>
+              <td class="mono" style="font-size:14px;font-weight:700;color:var(--gold)" id="cc-total-${d}">${money(total)}</td>
+              <td>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                  <input type="checkbox" id="cc-ver-${d}" ${verified?'checked':''} onchange="updateVerified(${d},this.checked)"
+                    style="width:16px;height:16px;accent-color:var(--green);cursor:pointer"/>
+                  <span style="font-size:12px;color:${verified?'var(--green)':'var(--muted)'}" id="cc-ver-label-${d}">${verified?'✓ Verified':'Unverified'}</span>
+                </label>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+        <tfoot>
+          <tr style="border-top:2px solid var(--border)">
+            <td colspan="2" style="font-weight:800;font-size:14px;padding-top:16px">Total Counted</td>
+            <td class="mono" style="font-size:16px;font-weight:800;color:var(--gold);padding-top:16px" id="cc-grand-total">${money(countedTotal)}</td>
+            <td style="padding-top:16px">
+              <span style="font-size:12px;color:var(--muted)">${CFA_BILLS.filter(d=>cc.verifiedBills?.[d]).length}/${CFA_BILLS.length} verified</span>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2" style="font-weight:800;font-size:14px;padding-top:8px">System Balance</td>
+            <td class="mono" style="font-size:14px;font-weight:700;color:var(--blue);padding-top:8px">${money(totalAllBalances)}</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td colspan="2" style="font-weight:800;font-size:15px;padding-top:8px">NET / Difference</td>
+            <td class="mono" style="font-size:15px;font-weight:800;color:var(--${match?'green':'red'});padding-top:8px" id="cc-net">${diff===0?'0 CFA — Balanced':money(Math.abs(diff))+' '+(diff>0?'Surplus':'Shortfall')}</td>
+            <td style="padding-top:8px"><span class="status status-${match?'approved':'rejected'}">${match?'Match':'Mismatch'}</span></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div class="form-actions" style="margin-top:20px">
+      <button class="btn btn-ghost btn-sm" onclick="resetCashCounter()">↺ Reset Count</button>
+      <button class="btn btn-gold btn-sm" onclick="saveCashCounter()">💾 Save Count to Database</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-title"><span>📋</span> Committee Balances for Reference</div>
+    ${Object.values(DATA.committees).map(c=>{
+      const pct=c.allocated>0?Math.round((c.balance/c.allocated)*100):0;
+      return`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:18px">${c.icon}</span>
+          <span style="font-weight:700">${c.name}</span>
+        </div>
+        <span class="mono" style="font-size:14px;font-weight:700">${money(c.balance)}</span>
+      </div>`;
+    }).join('')}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;margin-top:4px">
+      <span style="font-weight:800;font-size:15px">Total System Balance</span>
+      <span class="mono" style="font-size:15px;font-weight:800;color:var(--gold)">${money(totalAllBalances)}</span>
+    </div>
+  </div>`;
+}
+
+// live update bill row as user types
+let ccDraft = {};
+function updateBillRow(denom, val){
+  const qty=Math.max(0,parseInt(val)||0);
+  ccDraft[denom]=qty;
+  const total=qty*denom;
+  const el=document.getElementById(`cc-total-${denom}`);
+  if(el) el.textContent=money(total);
+  // recalc grand total
+  const grandTotal=CFA_BILLS.reduce((s,d)=>{
+    const q=ccDraft[d]!==undefined?ccDraft[d]:(parseInt(document.getElementById(`cc-qty-${d}`)?.value)||0);
+    return s+(q*d);
+  },0);
+  const totalAllBalances=Object.values(DATA.committees).reduce((s,c)=>s+c.balance,0);
+  const diff=grandTotal-totalAllBalances;
+  const match=diff===0;
+  const gtEl=document.getElementById('cc-grand-total');
+  const ctEl=document.getElementById('cc-counted-total');
+  const netEl=document.getElementById('cc-net');
+  const diffEl=document.getElementById('cc-diff');
+  if(gtEl) gtEl.textContent=money(grandTotal);
+  if(ctEl) ctEl.textContent=money(grandTotal);
+  if(netEl) netEl.textContent=diff===0?'0 CFA — Balanced':money(Math.abs(diff))+' '+(diff>0?'Surplus':'Shortfall');
+  if(diffEl) diffEl.textContent=diff===0?'Balanced':money(Math.abs(diff));
+}
+function updateVerified(denom, checked){
+  const label=document.getElementById(`cc-ver-label-${denom}`);
+  if(label){label.textContent=checked?'✓ Verified':'Unverified';label.style.color=checked?'var(--green)':'var(--muted)';}
+}
+async function saveCashCounter(){
+  const bills={};
+  const verifiedBills={};
+  CFA_BILLS.forEach(d=>{
+    bills[d]=parseInt(document.getElementById(`cc-qty-${d}`)?.value)||0;
+    verifiedBills[d]=document.getElementById(`cc-ver-${d}`)?.checked||false;
+  });
+  const snap=await getDocs(collection(db,'cashcounter'));
+  const data={bills,verifiedBills,lastSaved:today(),savedBy:currentUser.id};
+  if(!snap.empty){
+    await dbUpdate('cashcounter',snap.docs[0].id,data);
+  } else {
+    await dbAdd('cashcounter',data);
+  }
+  toast('Cash count saved to database ✓','success');
+  ccDraft={};
+}
+async function resetCashCounter(){
+  if(!confirm('Reset all bill counts to zero?'))return;
+  CFA_BILLS.forEach(d=>{
+    const el=document.getElementById(`cc-qty-${d}`);
+    if(el){el.value=0;updateBillRow(d,0);}
+    const ver=document.getElementById(`cc-ver-${d}`);
+    if(ver){ver.checked=false;updateVerified(d,false);}
+  });
+  toast('Count reset','info');
+}
+
+// expose window
+window.updateBillRow=updateBillRow;
+window.updateVerified=updateVerified;
+window.saveCashCounter=saveCashCounter;
+window.resetCashCounter=resetCashCounter;
 
 // ═══════════════════════════════════════════════
 //  MODAL / TOAST / ZOOM
