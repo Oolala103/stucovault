@@ -391,28 +391,54 @@ const DATA = { users:[], committees:{}, transactions:[], reimbursements:[], cash
 // Default seed data — only written once if Firestore is empty
 const SEED = {
   users:[
-    {id:'u1',username:'treasurer',password:'vault123',name:'Jordan Reyes',role:'treasurer',committee:null},
-    {id:'u2',username:'supervisor',password:'vault123',name:'Morgan Blake',role:'supervisor',committee:null},
-    {id:'u3',username:'alice',password:'vault123',name:'Alice Chen',role:'member',committee:'sports'},
-    {id:'u4',username:'ben',password:'vault123',name:'Ben Torres',role:'member',committee:'spirit'},
-    {id:'u5',username:'carla',password:'vault123',name:'Carla Singh',role:'member',committee:'house'},
-    {id:'u6',username:'dan',password:'vault123',name:'Dan Park',role:'member',committee:'social'},
+    {id:'u1',username:'treasurer',password:'vault123',name:'Treasurer',role:'treasurer',committee:null},
+    {id:'u2',username:'supervisor',password:'vault123',name:'Supervisor',role:'supervisor',committee:null},
   ],
   committees:[
-    {id:'sports',name:'Sports',icon:'🏅',allocated:3000,balance:1750,color:'blue'},
-    {id:'spirit',name:'Spirit',icon:'🎉',allocated:2500,balance:1900,color:'gold'},
-    {id:'house',name:'House',icon:'🏠',allocated:2000,balance:1200,color:'green'},
-    {id:'social',name:'Social',icon:'🎊',allocated:2800,balance:980,color:'orange'},
+    {id:'spirit',name:'Spirit',icon:'🎉',allocated:125000,balance:125000,color:'gold'},
+    {id:'social',name:'Social',icon:'🎊',allocated:200000,balance:654000,color:'orange'},
+    {id:'community',name:'Community Fund',icon:'👥',allocated:152000,balance:142000,color:'blue'},
+    {id:'sports',name:'Sports',icon:'⚽',allocated:100000,balance:91000,color:'green'},
+    {id:'house',name:'House',icon:'🏠',allocated:100000,balance:16500,color:'purple'},
   ],
   transactions:[
-    {id:'t1',desc:'Trophy purchase',amount:320,committee:'sports',date:'2025-04-01',type:'expense',createdBy:'u3',status:'approved',approvedBy:'u1',approvedDate:'2025-04-02'},
-    {id:'t2',desc:'Spirit kits printing',amount:450,committee:'spirit',date:'2025-04-03',type:'expense',createdBy:'u4',status:'pending',approvedBy:null,approvedDate:null},
-    {id:'t3',desc:'Ticket sales — House event',amount:600,committee:'house',date:'2025-04-04',type:'revenue',createdBy:'u5',status:'approved',approvedBy:'u2',approvedDate:'2025-04-05'},
+    // ── SPIRIT ──
+    {id:'t_sp1',desc:'Starting Budget 2025',amount:125000,committee:'spirit',date:'2025-11-02',type:'revenue',createdBy:'u1',status:'approved',approvedBy:'u1',approvedDate:'2025-11-02'},
+    // ── SOCIAL ──
+    {id:'t_so1',desc:'Starting Budget 2025',amount:200000,committee:'social',date:'2025-11-02',type:'revenue',createdBy:'u1',status:'approved',approvedBy:'u1',approvedDate:'2025-11-02'},
+    {id:'t_so2',desc:'Volleyball Games Bakesale',amount:39000,committee:'social',date:'2025-10-01',type:'revenue',createdBy:'u1',status:'approved',approvedBy:'u1',approvedDate:'2025-10-01'},
+    {id:'t_so3',desc:'Panther plays bake sale',amount:109000,committee:'social',date:'2025-11-21',type:'revenue',createdBy:'u1',status:'approved',approvedBy:'u1',approvedDate:'2025-11-21'},
+    {id:'t_so4',desc:'HOCO Tickets sales',amount:51000,committee:'social',date:'2025-11-29',type:'revenue',createdBy:'u1',status:'approved',approvedBy:'u1',approvedDate:'2025-11-29'},
+    {id:'t_so5',desc:'Chic shop Reimbursment',amount:20000,committee:'social',date:'2025-12-10',type:'expense',createdBy:'u1',status:'approved',approvedBy:'u1',approvedDate:'2025-12-10'},
+    {id:'t_so6',desc:'Winter Movie Night',amount:0,committee:'social',date:'2025-12-12',type:'expense',createdBy:'u1',status:'approved',approvedBy:'u1',approvedDate:'2025-12-12'},
+    {id:'t_so7',desc:'Chic shop Reimbursment',amount:30000,committee:'social',date:'2026-02-04',type:'expense',createdBy:'u1',status:'approved',approvedBy:'u1',approvedDate:'2026-02-04'},
+    {id:'t_so8',desc:'Movie Night Bake Sale',amount:80000,committee:'social',date:'2026-02-04',type:'revenue',createdBy:'u1',status:'approved',approvedBy:'u1',approvedDate:'2026-02-04'},
+    {id:'t_so9',desc:"Valentine's Day Bake Sale",amount:117000,committee:'social',date:'2026-02-14',type:'revenue',createdBy:'u1',status:'approved',approvedBy:'u1',approvedDate:'2026-02-14'},
+    {id:'t_so10',desc:'Bake Sale',amount:78000,committee:'social',date:'2026-02-14',type:'revenue',createdBy:'u1',status:'approved',approvedBy:'u1',approvedDate:'2026-02-14'},
+    // ── COMMUNITY FUND ──
+    {id:'t_cf1',desc:'Starting Budget 2025',amount:152000,committee:'community',date:'2025-11-02',type:'revenue',createdBy:'u1',status:'approved',approvedBy:'u1',approvedDate:'2025-11-02'},
+    {id:'t_cf2',desc:'Lockbox Storing Stuco Fund',amount:10000,committee:'community',date:'2025-12-10',type:'expense',createdBy:'u1',status:'approved',approvedBy:'u1',approvedDate:'2025-12-10'},
+    // ── SPORTS ──
+    {id:'t_st1',desc:'Starting Budget 2025',amount:100000,committee:'sports',date:'2025-11-02',type:'revenue',createdBy:'u1',status:'approved',approvedBy:'u1',approvedDate:'2025-11-02'},
+    {id:'t_st2',desc:'MS Local Waisal Bake Sale',amount:31000,committee:'sports',date:'2025-12-06',type:'revenue',createdBy:'u1',status:'approved',approvedBy:'u1',approvedDate:'2025-12-06'},
+    {id:'t_st3',desc:'Prizes for Afcon Trivia',amount:40000,committee:'sports',date:'2026-01-14',type:'expense',createdBy:'u1',status:'approved',approvedBy:'u1',approvedDate:'2026-01-14'},
+    // ── HOUSE ──
+    {id:'t_h1',desc:'Starting Budget 2025',amount:100000,committee:'house',date:'2025-11-02',type:'revenue',createdBy:'u1',status:'approved',approvedBy:'u1',approvedDate:'2025-11-02'},
+    {id:'t_h2',desc:'Guess the Candy in the Jar',amount:1500,committee:'house',date:'2025-11-06',type:'revenue',createdBy:'u1',status:'approved',approvedBy:'u1',approvedDate:'2025-11-06'},
+    {id:'t_h3',desc:'House Shirt Sample',amount:24000,committee:'house',date:'2026-01-08',type:'expense',createdBy:'u1',status:'approved',approvedBy:'u1',approvedDate:'2026-01-08'},
+    {id:'t_h4',desc:'House prizes',amount:61000,committee:'house',date:'2026-01-08',type:'expense',createdBy:'u1',status:'approved',approvedBy:'u1',approvedDate:'2026-01-08'},
   ],
-  reimbursements:[
-    {id:'r1',amount:75,reason:'Bus fare for away game',committee:'sports',requestedBy:'u3',date:'2025-04-02',status:'pending',receipts:[],receiptNames:[],flagged:false},
-  ],
+  reimbursements:[],
+  cashCounter:{
+    bills:{10000:62,5000:74,2000:20,1000:11,500:71,100:0},
+    verifiedBills:{10000:true,5000:true,2000:true,1000:true,500:true,100:true},
+    lastSaved:'2025-12-10',
+    savedBy:'u1',
+  },
 };
+
+// ── FORCE UPDATE — set to true to overwrite Firestore with SEED data ──
+const FORCE_RESEED = true;
 
 let currentUser = null;
 let currentPage = 'dashboard';
@@ -427,15 +453,24 @@ function hideLoading(){
   document.getElementById('loading-screen').style.display='none';
 }
 
-// ── Seed Firestore with default data if empty ──
+// ── Seed Firestore with real data ──
 async function seedIfEmpty(){
   const usersSnap = await getDocs(collection(db,'users'));
-  if(!usersSnap.empty) return; // already seeded
-  showLoading('Setting up your database for the first time…');
+  if(!usersSnap.empty && !FORCE_RESEED) return; // already seeded
+  showLoading('Setting up your database…');
+  // clear old data if force reseeding
+  if(FORCE_RESEED){
+    for(const d of (await getDocs(collection(db,'users'))).docs) await deleteDoc(doc(db,'users',d.id));
+    for(const d of (await getDocs(collection(db,'committees'))).docs) await deleteDoc(doc(db,'committees',d.id));
+    for(const d of (await getDocs(collection(db,'transactions'))).docs) await deleteDoc(doc(db,'transactions',d.id));
+    for(const d of (await getDocs(collection(db,'reimbursements'))).docs) await deleteDoc(doc(db,'reimbursements',d.id));
+    for(const d of (await getDocs(collection(db,'cashcounter'))).docs) await deleteDoc(doc(db,'cashcounter',d.id));
+  }
   for(const u of SEED.users) await setDoc(doc(db,'users',u.id),u);
   for(const c of SEED.committees) await setDoc(doc(db,'committees',c.id),c);
   for(const t of SEED.transactions) await setDoc(doc(db,'transactions',t.id),t);
   for(const r of SEED.reimbursements) await setDoc(doc(db,'reimbursements',r.id),r);
+  await addDoc(collection(db,'cashcounter'),SEED.cashCounter);
 }
 
 // ── Load all data from Firestore into DATA ──
