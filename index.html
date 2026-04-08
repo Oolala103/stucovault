@@ -288,36 +288,39 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <span>Stuco<em>Vault</em></span>
     </div>
     <div class="login-title">Sign in to your account</div>
-    <div class="login-sub">Student Council Fund Management</div>
-    <div class="field-group">
-      <label>Username</label>
-      <input type="text" id="login-username" placeholder="Enter username"/>
+    <div class="login-sub">Use your @icsabidjan.org school email</div>
+
+    <!-- LOGIN FORM -->
+    <div id="login-form-view">
+      <div class="field-group">
+        <label>School Email</label>
+        <input type="email" id="login-email" placeholder="yourname@icsabidjan.org"/>
+      </div>
+      <div class="field-group">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"/>
+      </div>
+      <p class="error-msg" id="login-error">Incorrect email or password.</p>
+      <button class="btn btn-gold" onclick="doLogin()" style="margin-top:12px">Sign In →</button>
+      <div style="text-align:center;margin-top:16px">
+        <span onclick="showForgotPassword()" style="font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;transition:var(--trans)" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--muted)'">Forgot your password?</span>
+      </div>
     </div>
-    <div class="field-group">
-      <label>Password</label>
-      <input type="password" id="login-password" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"/>
-    </div>
-    <p class="error-msg" id="login-error">Incorrect username or password.</p>
-    <button class="btn btn-gold" onclick="doLogin()" style="margin-top:12px">Sign In →</button>
-    <div class="login-demo">
-      <p>Demo accounts — click to auto-fill</p>
-      <div class="demo-users">
-        <div class="demo-user" onclick="fillDemo('treasurer','vault123')">
-          <div class="demo-user-info">treasurer</div>
-          <div class="demo-user-role">🏛 Treasurer · vault123</div>
-        </div>
-        <div class="demo-user" onclick="fillDemo('supervisor','vault123')">
-          <div class="demo-user-info">supervisor</div>
-          <div class="demo-user-role">🔍 Supervisor · vault123</div>
-        </div>
-        <div class="demo-user" onclick="fillDemo('alice','vault123')">
-          <div class="demo-user-info">alice</div>
-          <div class="demo-user-role">👤 Member (Sports) · vault123</div>
-        </div>
-        <div class="demo-user" onclick="fillDemo('ben','vault123')">
-          <div class="demo-user-info">ben</div>
-          <div class="demo-user-role">👤 Member (Spirit) · vault123</div>
-        </div>
+
+    <!-- FORGOT PASSWORD FORM -->
+    <div id="forgot-form-view" style="display:none">
+      <div style="background:rgba(79,156,249,.08);border:1px solid rgba(79,156,249,.2);border-radius:8px;padding:14px;font-size:12px;color:var(--blue);margin-bottom:20px">
+        📧 Enter your school email and we'll send you a password reset link instantly.
+      </div>
+      <div class="field-group">
+        <label>School Email</label>
+        <input type="email" id="reset-email" placeholder="yourname@icsabidjan.org" onkeydown="if(event.key==='Enter')doResetPassword()"/>
+      </div>
+      <p class="error-msg" id="reset-error">Email not found. Check the address and try again.</p>
+      <p id="reset-success" style="color:var(--green);font-size:12px;margin-top:8px;display:none">✓ Reset email sent! Check your inbox.</p>
+      <button class="btn btn-gold" onclick="doResetPassword()" style="margin-top:12px">Send Reset Email →</button>
+      <div style="text-align:center;margin-top:16px">
+        <span onclick="showLoginForm()" style="font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--muted)'">← Back to sign in</span>
       </div>
     </div>
   </div>
@@ -370,6 +373,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 // ═══════════════════════════════════════════════
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, doc, getDocs, getDoc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, onAuthStateChanged, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAhF23yUTdoPP7_ZOE6z6FtOT8NZHUCgQI",
@@ -382,6 +386,7 @@ const firebaseConfig = {
 
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
+const auth = getAuth(firebaseApp);
 
 // ═══════════════════════════════════════════════
 //  LIVE DATA STORE (synced from Firestore)
@@ -437,8 +442,8 @@ const SEED = {
   },
 };
 
-// ── FORCE UPDATE — set to true to overwrite Firestore with SEED data ──
-const FORCE_RESEED = true;
+// ── FORCE UPDATE — keep false unless you need to reseed ──
+const FORCE_RESEED = false;
 
 let currentUser = null;
 let currentPage = 'dashboard';
@@ -456,9 +461,8 @@ function hideLoading(){
 // ── Seed Firestore with real data ──
 async function seedIfEmpty(){
   const usersSnap = await getDocs(collection(db,'users'));
-  if(!usersSnap.empty && !FORCE_RESEED) return; // already seeded
+  if(!usersSnap.empty && !FORCE_RESEED) return;
   showLoading('Setting up your database…');
-  // clear old data if force reseeding
   if(FORCE_RESEED){
     for(const d of (await getDocs(collection(db,'users'))).docs) await deleteDoc(doc(db,'users',d.id));
     for(const d of (await getDocs(collection(db,'committees'))).docs) await deleteDoc(doc(db,'committees',d.id));
@@ -470,10 +474,45 @@ async function seedIfEmpty(){
   for(const c of SEED.committees) await setDoc(doc(db,'committees',c.id),c);
   for(const t of SEED.transactions) await setDoc(doc(db,'transactions',t.id),t);
   for(const r of SEED.reimbursements) await setDoc(doc(db,'reimbursements',r.id),r);
-  await addDoc(collection(db,'cashcounter'),SEED.cashCounter);
+  const ccSnap2=await getDocs(collection(db,'cashcounter'));
+  if(ccSnap2.empty) await addDoc(collection(db,'cashcounter'),SEED.cashCounter);
 }
 
-// ── Load all data from Firestore into DATA ──
+// ── Bootstrap — use Firebase Auth to persist sessions ──
+async function init(){
+  showLoading('Connecting to database…');
+  try{
+    await seedIfEmpty();
+    await loadAllData();
+    setupListeners();
+    dbReady=true;
+    // Check if user already has an active session
+    onAuthStateChanged(auth, async(firebaseUser)=>{
+      if(firebaseUser){
+        // User is already logged in — find their profile in Firestore
+        const profile = DATA.users.find(u=>u.email===firebaseUser.email||u.id===firebaseUser.uid);
+        if(profile){
+          currentUser=profile;
+          hideLoading();
+          document.getElementById('login-screen').style.display='none';
+          document.getElementById('app').style.display='flex';
+          setupSidebar();
+          navigateTo('dashboard');
+        } else {
+          hideLoading();
+          document.getElementById('login-screen').style.display='flex';
+        }
+      } else {
+        hideLoading();
+        document.getElementById('login-screen').style.display='flex';
+      }
+    });
+  } catch(e){
+    console.error(e);
+    document.getElementById('loading-msg').textContent='⚠️ Could not connect to database. Check your internet connection.';
+  }
+}
+init();
 async function loadAllData(){
   const [usersSnap,committeesSnap,txSnap,rmSnap,ccSnap] = await Promise.all([
     getDocs(collection(db,'users')),
@@ -578,30 +617,90 @@ function committeeTag(id){
 // ═══════════════════════════════════════════════
 //  AUTH
 // ═══════════════════════════════════════════════
-function fillDemo(u,p){
-  document.getElementById('login-username').value=u;
-  document.getElementById('login-password').value=p;
+// ── Login/logout toggle helpers ──
+function showForgotPassword(){
+  document.getElementById('login-form-view').style.display='none';
+  document.getElementById('forgot-form-view').style.display='block';
+  document.getElementById('reset-error').style.display='none';
+  document.getElementById('reset-success').style.display='none';
 }
-function doLogin(){
-  const u=document.getElementById('login-username').value.trim();
-  const p=document.getElementById('login-password').value;
+function showLoginForm(){
+  document.getElementById('forgot-form-view').style.display='none';
+  document.getElementById('login-form-view').style.display='block';
+  document.getElementById('login-error').style.display='none';
+}
+
+async function doLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const password=document.getElementById('login-password').value;
   const err=document.getElementById('login-error');
-  const user=DATA.users.find(x=>x.username===u&&x.password===p);
-  if(!user){err.style.display='block';return}
   err.style.display='none';
-  currentUser=user;
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('app').style.display='flex';
-  setupSidebar();
-  navigateTo('dashboard');
+  if(!email||!password){err.textContent='Please enter your email and password.';err.style.display='block';return}
+  if(!email.endsWith('@icsabidjan.org')){err.textContent='Please use your @icsabidjan.org school email.';err.style.display='block';return}
+  try{
+    showLoading('Signing in…');
+    const cred=await signInWithEmailAndPassword(auth,email,password);
+    // Find matching profile in Firestore by email or uid
+    let profile=DATA.users.find(u=>u.email===email||u.id===cred.user.uid);
+    if(!profile){
+      // Try to match by uid stored in Firestore
+      const snap=await getDoc(doc(db,'users',cred.user.uid));
+      if(snap.exists()) profile={...snap.data(),id:snap.id};
+    }
+    if(!profile){
+      await signOut(auth);
+      hideLoading();
+      err.textContent='Account not found. Contact your treasurer to be added.';err.style.display='block';return;
+    }
+    currentUser=profile;
+    hideLoading();
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='flex';
+    setupSidebar();
+    navigateTo('dashboard');
+  } catch(e){
+    hideLoading();
+    if(e.code==='auth/user-not-found'||e.code==='auth/wrong-password'||e.code==='auth/invalid-credential'){
+      err.textContent='Incorrect email or password.';
+    } else if(e.code==='auth/too-many-requests'){
+      err.textContent='Too many attempts. Please try again later.';
+    } else {
+      err.textContent='Sign in failed: '+e.message;
+    }
+    err.style.display='block';
+  }
 }
-function doLogout(){
+
+async function doResetPassword(){
+  const email=document.getElementById('reset-email').value.trim();
+  const err=document.getElementById('reset-error');
+  const succ=document.getElementById('reset-success');
+  err.style.display='none';succ.style.display='none';
+  if(!email){err.textContent='Please enter your school email.';err.style.display='block';return}
+  if(!email.endsWith('@icsabidjan.org')){err.textContent='Please use your @icsabidjan.org school email.';err.style.display='block';return}
+  try{
+    await sendPasswordResetEmail(auth,email);
+    succ.style.display='block';
+    document.getElementById('reset-email').value='';
+  } catch(e){
+    if(e.code==='auth/user-not-found'){
+      err.textContent='No account found with this email.';
+    } else {
+      err.textContent='Could not send reset email: '+e.message;
+    }
+    err.style.display='block';
+  }
+}
+
+async function doLogout(){
+  await signOut(auth);
   currentUser=null;
   currentPage='dashboard';
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('app').style.display='none';
-  document.getElementById('login-username').value='';
+  document.getElementById('login-email').value='';
   document.getElementById('login-password').value='';
+  showLoginForm();
 }
 
 // ═══════════════════════════════════════════════
@@ -612,7 +711,7 @@ function setupSidebar(){
   const un=document.getElementById('sb-username');
   const b=document.getElementById('sb-badge');
   n.textContent=currentUser.name;
-  un.textContent='@'+currentUser.username;
+  un.textContent=currentUser.email||('@'+currentUser.username)||'';
   const bMap={treasurer:'badge-treasurer 🏛 Treasurer',supervisor:'badge-supervisor 🔍 Supervisor',member:'badge-member 👤 Member'};
   const [cls,txt]=bMap[currentUser.role].split(' ');
   b.className='sidebar-badge '+cls;
@@ -1024,7 +1123,7 @@ function renderMembers(){
           <span class="member-name">${m.name}</span>
           <span class="sidebar-badge ${badgeCls.trim()}" style="font-size:10px">${badgeTxt.trim()}</span>
         </div>
-        <div class="member-username">@${m.username}${m.role==='member'?' · '+(c?c.icon+' '+c.name:'No committee'):' · All committees'}</div>
+        <div class="member-username">${m.email||('@'+(m.username||''))}${m.role==='member'?' · '+(c?c.icon+' '+c.name:'No committee'):' · All committees'}</div>
       </div>
       <div class="member-actions">
         ${m.role==='member'?`<button class="btn btn-ghost btn-sm" onclick="openTransferMember('${m.id}')">Transfer</button>`:''}
@@ -1077,10 +1176,10 @@ function openAddMember(){
   <div class="form-grid">
     <div class="form-row">
       <div class="form-group"><label>Full Name</label><input id="nm-name" placeholder="e.g. Sam Lee"/></div>
-      <div class="form-group"><label>Username</label><input id="nm-user" placeholder="e.g. sam.lee"/></div>
+      <div class="form-group"><label>School Email</label><input type="email" id="nm-email" placeholder="sam.lee@icsabidjan.org"/></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>Password</label><input type="password" id="nm-pass" placeholder="Password"/></div>
+      <div class="form-group"><label>Temporary Password</label><input type="password" id="nm-pass" placeholder="Min 6 characters"/></div>
       <div class="form-group">
         <label>Role</label>
         <select id="nm-role" onchange="toggleCommitteeField(this.value)">
@@ -1097,7 +1196,10 @@ function openAddMember(){
       <p style="font-size:11px;color:var(--muted);margin-top:4px">Members are assigned to one committee only</p>
     </div>
     <div id="nm-supervisor-note" style="display:none;background:rgba(79,156,249,.08);border:1px solid rgba(79,156,249,.2);border-radius:8px;padding:12px;font-size:12px;color:var(--blue)">
-      🔍 Supervisors can view all committees, verify purchases, and approve or reject requests. They are not assigned to a specific committee.
+      🔍 Supervisors can view all committees, verify purchases, and approve or reject requests.
+    </div>
+    <div style="background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);border-radius:8px;padding:12px;font-size:12px;color:var(--gold)">
+      ⚠️ The email must end in @icsabidjan.org. A Firebase Auth account will be created automatically. The user can reset their password anytime from the login page.
     </div>
   </div>
   <p id="nm-err" style="color:var(--red);font-size:12px;margin-top:8px;display:none"></p>
@@ -1114,17 +1216,37 @@ function toggleCommitteeField(role){
 }
 async function doAddMember(){
   const name=document.getElementById('nm-name').value.trim();
-  const user=document.getElementById('nm-user').value.trim();
+  const email=document.getElementById('nm-email').value.trim().toLowerCase();
   const pass=document.getElementById('nm-pass').value;
   const role=document.getElementById('nm-role').value;
   const committee=role==='member'?(document.getElementById('nm-committee')?.value||null):null;
   const err=document.getElementById('nm-err');
-  if(!name||!user||!pass){err.textContent='All fields required.';err.style.display='block';return}
-  if(DATA.users.find(u=>u.username===user)){err.textContent='Username already taken.';err.style.display='block';return}
-  const newId=genId();
-  await dbSet('users',newId,{id:newId,username:user,password:pass,name,role,committee});
-  closeModal();
-  toast(`${role==='supervisor'?'Supervisor':'Member'} "${name}" added`,'success');
+  err.style.display='none';
+  if(!name||!email||!pass){err.textContent='All fields required.';err.style.display='block';return}
+  if(!email.endsWith('@icsabidjan.org')){err.textContent='Email must end in @icsabidjan.org';err.style.display='block';return}
+  if(pass.length<6){err.textContent='Password must be at least 6 characters.';err.style.display='block';return}
+  if(DATA.users.find(u=>u.email===email)){err.textContent='An account with this email already exists.';err.style.display='block';return}
+  try{
+    // Create Firebase Auth account
+    const {createUserWithEmailAndPassword} = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+    const cred=await createUserWithEmailAndPassword(auth,email,pass);
+    const newId=cred.user.uid;
+    await dbSet('users',newId,{id:newId,email,name,role,committee,password:pass});
+    // Sign back in as current treasurer (creating a user signs you in as them)
+    await signInWithEmailAndPassword(auth,currentUser.email,currentUser.password||'');
+    closeModal();
+    toast(`${role==='supervisor'?'Supervisor':'Member'} "${name}" added`,'success');
+  } catch(e){
+    if(e.code==='auth/email-already-in-use'){
+      // Auth account exists, just save to Firestore
+      const newId=genId();
+      await dbSet('users',newId,{id:newId,email,name,role,committee,password:pass});
+      closeModal();
+      toast(`${role==='supervisor'?'Supervisor':'Member'} "${name}" added`,'success');
+    } else {
+      err.textContent='Error: '+e.message;err.style.display='block';
+    }
+  }
 }
 
 // ── ACCOUNT ──
@@ -1170,13 +1292,29 @@ async function changePassword(){
   const nw=document.getElementById('pw-new').value;
   const conf=document.getElementById('pw-confirm').value;
   const err=document.getElementById('pw-err');
-  if(old!==currentUser.password){err.textContent='Current password is incorrect.';err.style.display='block';return}
-  if(!nw||nw.length<4){err.textContent='New password must be at least 4 characters.';err.style.display='block';return}
-  if(nw!==conf){err.textContent='Passwords do not match.';err.style.display='block';return}
   err.style.display='none';
-  await dbUpdate('users',currentUser.id,{password:nw});
-  toast('Password updated successfully','success');
-  document.getElementById('pw-old').value='';document.getElementById('pw-new').value='';document.getElementById('pw-confirm').value='';
+  if(!old){err.textContent='Current password is required.';err.style.display='block';return}
+  if(!nw||nw.length<6){err.textContent='New password must be at least 6 characters.';err.style.display='block';return}
+  if(nw!==conf){err.textContent='Passwords do not match.';err.style.display='block';return}
+  try{
+    // Reauthenticate first for security
+    const credential=EmailAuthProvider.credential(auth.currentUser.email,old);
+    await reauthenticateWithCredential(auth.currentUser,credential);
+    await updatePassword(auth.currentUser,nw);
+    // Also update in Firestore for reference
+    await dbUpdate('users',currentUser.id,{password:nw});
+    toast('Password updated successfully','success');
+    document.getElementById('pw-old').value='';
+    document.getElementById('pw-new').value='';
+    document.getElementById('pw-confirm').value='';
+  } catch(e){
+    if(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential'){
+      err.textContent='Current password is incorrect.';
+    } else {
+      err.textContent='Could not update password: '+e.message;
+    }
+    err.style.display='block';
+  }
 }
 
 // ═══════════════════════════════════════════════
@@ -1790,7 +1928,9 @@ function zoomImg(src){
 }
 
 // expose functions needed by inline HTML onclick handlers
-window.doLogin=doLogin;window.doLogout=doLogout;window.fillDemo=fillDemo;
+window.doLogin=doLogin;window.doLogout=doLogout;
+window.showForgotPassword=showForgotPassword;window.showLoginForm=showLoginForm;
+window.doResetPassword=doResetPassword;
 window.navigateTo=navigateTo;window.closeModal=closeModal;window.zoomImg=zoomImg;
 window.openNewTransaction=openNewTransaction;window.submitTransaction=submitTransaction;
 window.openNewReimbursement=openNewReimbursement;window.submitReimbursement=submitReimbursement;
