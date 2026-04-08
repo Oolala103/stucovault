@@ -482,14 +482,23 @@ async function seedIfEmpty(){
 async function init(){
   showLoading('Connecting to database…');
   try{
+    document.getElementById('loading-msg').textContent='Step 1: Connecting to Firestore…';
     await seedIfEmpty();
+    document.getElementById('loading-msg').textContent='Step 2: Loading data…';
     await loadAllData();
+    document.getElementById('loading-msg').textContent='Step 3: Setting up listeners…';
     setupListeners();
     dbReady=true;
-    // Check if user already has an active session
+    document.getElementById('loading-msg').textContent='Step 4: Checking auth session…';
+    // Use a timeout fallback so we never get permanently stuck
+    const authTimeout=setTimeout(()=>{
+      hideLoading();
+      document.getElementById('login-screen').style.display='flex';
+    },5000);
     onAuthStateChanged(auth, async(firebaseUser)=>{
+      clearTimeout(authTimeout);
       if(firebaseUser){
-        // User is already logged in — find their profile in Firestore
+        document.getElementById('loading-msg').textContent='Signing you in…';
         const profile = DATA.users.find(u=>u.email===firebaseUser.email||u.id===firebaseUser.uid);
         if(profile){
           currentUser=profile;
@@ -508,8 +517,8 @@ async function init(){
       }
     });
   } catch(e){
-    console.error(e);
-    document.getElementById('loading-msg').textContent='⚠️ Could not connect to database. Check your internet connection.';
+    console.error('StucoVault init error:',e);
+    document.getElementById('loading-msg').textContent='⚠️ Error: '+e.message+' — Please check Firebase console and refresh.';
   }
 }
 init();
@@ -562,22 +571,6 @@ async function dbUpdate(col,id,data){ await updateDoc(doc(db,col,id),data); }
 async function dbAdd(col,data){ const ref=await addDoc(collection(db,col),data); return ref.id; }
 async function dbDelete(col,id){ await deleteDoc(doc(db,col,id)); }
 
-// ── Bootstrap ──
-async function init(){
-  showLoading('Connecting to database…');
-  try{
-    await seedIfEmpty();
-    await loadAllData();
-    setupListeners();
-    dbReady=true;
-    hideLoading();
-    document.getElementById('login-screen').style.display='flex';
-  } catch(e){
-    console.error(e);
-    document.getElementById('loading-msg').textContent='⚠️ Could not connect to database. Check your internet connection.';
-  }
-}
-init();
 
 // ═══════════════════════════════════════════════
 //  HELPERS
