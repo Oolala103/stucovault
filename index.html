@@ -581,6 +581,21 @@ function money(n){return Number(n).toLocaleString('fr-FR')+' CFA'}
 function formatDate(d){if(!d)return'—';const[y,m,day]=d.split('-');const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return`${months[parseInt(m)-1]} ${parseInt(day)}, ${y}`}
 function genId(){return'x'+Math.random().toString(36).slice(2,8)}
 function today(){return new Date().toISOString().slice(0,10)}
+const selStyle=`padding:7px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:var(--white);font-size:12px;font-family:'Syne',sans-serif;outline:none`;
+function txRow(t,canAct){
+  const u=getUserById(t.createdBy);
+  const ab=t.approvedBy?getUserById(t.approvedBy):null;
+  return`<tr id="tr-${t.id}">
+    <td><div style="font-weight:600">${t.desc}</div>${t.approvedBy?`<div style="font-size:10px;color:var(--muted);margin-top:2px">${t.status==='approved'?'✓':'✗'} by ${ab?.name||'?'} on ${formatDate(t.approvedDate)}</div>`:''}</td>
+    <td>${committeeTag(t.committee)}</td>
+    <td class="mono" style="color:${t.type==='expense'?'var(--red)':'var(--green)'};font-weight:700">${t.type==='expense'?'-':'+'} ${money(t.amount)}</td>
+    <td><span class="tag tag-${t.type}">${t.type}</span></td>
+    <td><div style="font-size:13px">${u?.name||'?'}</div><div style="font-size:10px;color:var(--muted)">${u?.email||''}</div></td>
+    <td style="color:var(--muted);font-size:12px">${formatDate(t.date)}</td>
+    <td><span class="status status-${t.status}">${t.status}</span></td>
+    ${canAct&&t.status==='pending'?`<td><div style="display:flex;gap:6px"><button class="btn btn-green btn-sm" onclick="approveTransaction('${t.id}')">Approve</button><button class="btn btn-red btn-sm" onclick="rejectTransaction('${t.id}')">Reject</button></div></td>`:canAct?'<td style="color:var(--muted);font-size:12px">Reviewed</td>':''}
+  </tr>`;
+}
 function can(action){
   const r=currentUser.role;
   const perms={
@@ -863,58 +878,105 @@ function renderDashboard(){
 }
 
 // ── TRANSACTIONS ──
+function getFilteredTx(){
+  const isAdmin=can('view_all');
+  const status=document.getElementById('tx-f-status')?.value||'';
+  const type=document.getElementById('tx-f-type')?.value||'';
+  const committee=document.getElementById('tx-f-committee')?.value||'';
+  const search=document.getElementById('tx-f-search')?.value?.toLowerCase()||'';
+  const sort=document.getElementById('tx-f-sort')?.value||'date-desc';
+  let txs=DATA.transactions.filter(t=>{
+    if(!isAdmin&&t.committee!==currentUser.committee) return false;
+    if(status&&t.status!==status) return false;
+    if(type&&t.type!==type) return false;
+    if(committee&&t.committee!==committee) return false;
+    if(search&&!t.desc.toLowerCase().includes(search)) return false;
+    return true;
+  });
+  txs.sort((a,b)=>{
+    switch(sort){
+      case 'date-desc': return b.date.localeCompare(a.date);
+      case 'date-asc': return a.date.localeCompare(b.date);
+      case 'amount-desc': return b.amount-a.amount;
+      case 'amount-asc': return a.amount-b.amount;
+      case 'alpha-asc': return a.desc.localeCompare(b.desc);
+      case 'alpha-desc': return b.desc.localeCompare(a.desc);
+      default: return b.date.localeCompare(a.date);
+    }
+  });
+  return txs;
+}
+function filterTx(){
+  const canAct=can('approve_transaction');
+  const txs=getFilteredTx();
+  const tbody=document.getElementById('tx-tbody');
+  const wrap=document.getElementById('tx-table-wrap');
+  if(!tbody||!wrap) return;
+  if(!txs.length){
+    wrap.innerHTML=`<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">No transactions match your filters</div><div class="empty-sub">Try adjusting the filters above</div></div>`;
+    return;
+  }
+  wrap.innerHTML=`<table><thead><tr><th>Description</th><th>Committee</th><th>Amount</th><th>Type</th><th>Created By</th><th>Date</th><th>Status</th>${canAct?'<th>Action</th>':''}</tr></thead><tbody id="tx-tbody">${txs.map(t=>txRow(t,canAct)).join('')}</tbody></table>`;
+}
 function renderTransactions(){
   const isAdmin=can('view_all');
-  const txs=DATA.transactions.filter(t=>isAdmin||t.committee===currentUser.committee);
   const canAct=can('approve_transaction');
-
   let topActions='';
   if(currentUser.role==='member') topActions=`<button class="btn btn-gold btn-sm" onclick="openNewTransaction()">+ New Transaction</button>`;
-  if(can('approve_transaction')) topActions=`<button class="btn btn-gold btn-sm" onclick="openNewTransaction()">+ Log Transaction</button>`;
+  if(canAct) topActions=`<button class="btn btn-gold btn-sm" onclick="openNewTransaction()">+ Log Transaction</button>`;
   document.getElementById('top-actions').innerHTML=topActions;
+  const txs=getFilteredTx();
+  const committeeOpts=isAdmin?Object.values(DATA.committees).map(c=>`<option value="${c.id}">${c.icon} ${c.name}</option>`).join(''):'';
 
   document.getElementById('page-content').innerHTML=`
   <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div class="card-title" style="margin-bottom:0"><span>↔</span> All Transactions</div>
-      <div style="display:flex;gap:8px">
-        <select onchange="filterTx(this.value)" style="padding:7px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:var(--white);font-size:12px;font-family:'Syne',sans-serif">
-          <option value="">All Status</option>
-          <option value="pending">Pending</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
-        </select>
-      </div>
+    <!-- Filter bar -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px">
+      <input id="tx-f-search" placeholder="🔍 Search description…" oninput="filterTx()"
+        style="padding:7px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:var(--white);font-size:12px;font-family:'Syne',sans-serif;flex:1;min-width:160px;outline:none"/>
+      <select id="tx-f-status" onchange="filterTx()" style="${selStyle}">
+        <option value="">All Status</option>
+        <option value="pending">⏳ Pending</option>
+        <option value="approved">✓ Approved</option>
+        <option value="rejected">✗ Rejected</option>
+      </select>
+      <select id="tx-f-type" onchange="filterTx()" style="${selStyle}">
+        <option value="">All Types</option>
+        <option value="expense">📤 Expense</option>
+        <option value="revenue">📥 Revenue</option>
+      </select>
+      ${isAdmin?`<select id="tx-f-committee" onchange="filterTx()" style="${selStyle}">
+        <option value="">All Committees</option>${committeeOpts}
+      </select>`:`<select id="tx-f-committee" style="display:none"></select>`}
+      <select id="tx-f-sort" onchange="filterTx()" style="${selStyle}">
+        <option value="date-desc">📅 Date: Newest first</option>
+        <option value="date-asc">📅 Date: Oldest first</option>
+        <option value="amount-desc">💰 Amount: Highest first</option>
+        <option value="amount-asc">💰 Amount: Lowest first</option>
+        <option value="alpha-asc">🔤 A → Z</option>
+        <option value="alpha-desc">🔤 Z → A</option>
+      </select>
+      <button onclick="clearTxFilters()" class="btn btn-ghost btn-sm">↺ Reset</button>
     </div>
-    <div class="table-wrap" id="tx-table-wrap">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px" id="tx-count">${txs.length} transaction${txs.length!==1?'s':''} shown</div>
+    <div id="tx-table-wrap">
     ${txs.length?`<table>
       <thead><tr><th>Description</th><th>Committee</th><th>Amount</th><th>Type</th><th>Created By</th><th>Date</th><th>Status</th>${canAct?'<th>Action</th>':''}</tr></thead>
       <tbody id="tx-tbody">${txs.map(t=>txRow(t,canAct)).join('')}</tbody>
-    </table>`:`<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No transactions found</div><div class="empty-sub">Transactions you create will appear here</div></div>`}
+    </table>`:`<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No transactions found</div></div>`}
     </div>
   </div>`;
 }
-function txRow(t,canAct){
-  const u=getUserById(t.createdBy);
-  const ab=t.approvedBy?getUserById(t.approvedBy):null;
-  return`<tr id="tr-${t.id}">
-    <td><div style="font-weight:600">${t.desc}</div>${t.approvedBy?`<div style="font-size:10px;color:var(--muted);margin-top:2px">${t.status==='approved'?'✓':'✗'} by ${ab?.name||'?'} on ${formatDate(t.approvedDate)}</div>`:''}</td>
-    <td>${committeeTag(t.committee)}</td>
-    <td class="mono" style="color:${t.type==='expense'?'var(--red)':'var(--green)'};font-weight:700">${t.type==='expense'?'-':'+'} ${money(t.amount)}</td>
-    <td><span class="tag tag-${t.type}">${t.type}</span></td>
-    <td><div style="font-size:13px">${u?.name||'?'}</div><div style="font-size:10px;color:var(--muted)">@${u?.username||'?'}</div></td>
-    <td style="color:var(--muted);font-size:12px">${formatDate(t.date)}</td>
-    <td><span class="status status-${t.status}">${t.status}</span></td>
-    ${canAct&&t.status==='pending'?`<td><div style="display:flex;gap:6px"><button class="btn btn-green btn-sm" onclick="approveTransaction('${t.id}')">Approve</button><button class="btn btn-red btn-sm" onclick="rejectTransaction('${t.id}')">Reject</button></div></td>`:canAct?'<td style="color:var(--muted);font-size:12px">Reviewed</td>':''}
-  </tr>`;
+function clearTxFilters(){
+  ['tx-f-search','tx-f-status','tx-f-type','tx-f-committee','tx-f-sort'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){el.value=el.tagName==='SELECT'?(id==='tx-f-sort'?'date-desc':''):''}
+  });
+  filterTx();
+  const c=document.getElementById('tx-count');
+  if(c) c.textContent=getFilteredTx().length+' transactions shown';
 }
-function filterTx(status){
-  const isAdmin=can('view_all');
-  const txs=DATA.transactions.filter(t=>(isAdmin||t.committee===currentUser.committee)&&(!status||t.status===status));
-  const canAct=can('approve_transaction');
-  const tbody=document.getElementById('tx-tbody');
-  if(tbody) tbody.innerHTML=txs.map(t=>txRow(t,canAct)).join('');
-}
+window.clearTxFilters=clearTxFilters;
 async function approveTransaction(id){
   const t=DATA.transactions.find(x=>x.id===id);
   if(!t)return;
@@ -935,21 +997,99 @@ async function rejectTransaction(id){
 }
 
 // ── REIMBURSEMENTS ──
+function getFilteredRm(){
+  const isAdmin=can('view_all');
+  const status=document.getElementById('rm-f-status')?.value||'';
+  const committee=document.getElementById('rm-f-committee')?.value||'';
+  const receipt=document.getElementById('rm-f-receipt')?.value||'';
+  const search=document.getElementById('rm-f-search')?.value?.toLowerCase()||'';
+  const sort=document.getElementById('rm-f-sort')?.value||'date-desc';
+  let rms=DATA.reimbursements.filter(r=>{
+    if(!isAdmin&&r.committee!==currentUser.committee) return false;
+    if(status&&r.status!==status) return false;
+    if(committee&&r.committee!==committee) return false;
+    if(receipt==='yes'&&(!r.receipts||r.receipts.length===0)) return false;
+    if(receipt==='no'&&r.receipts&&r.receipts.length>0) return false;
+    if(search&&!r.reason.toLowerCase().includes(search)) return false;
+    return true;
+  });
+  rms.sort((a,b)=>{
+    switch(sort){
+      case 'date-desc': return b.date.localeCompare(a.date);
+      case 'date-asc': return a.date.localeCompare(b.date);
+      case 'amount-desc': return b.amount-a.amount;
+      case 'amount-asc': return a.amount-b.amount;
+      case 'alpha-asc': return a.reason.localeCompare(b.reason);
+      case 'alpha-desc': return b.reason.localeCompare(a.reason);
+      default: return b.date.localeCompare(a.date);
+    }
+  });
+  return rms;
+}
+function filterRm(){
+  const canAct=can('approve_reimbursement');
+  const rms=getFilteredRm();
+  const wrap=document.getElementById('rm-list-wrap');
+  if(!wrap) return;
+  const count=document.getElementById('rm-count');
+  if(count) count.textContent=`${rms.length} request${rms.length!==1?'s':''} shown`;
+  wrap.innerHTML=rms.length?rms.map(r=>rmCard(r,canAct)).join(''):`<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">No reimbursements match your filters</div></div>`;
+}
 function renderReimbursements(){
   const isAdmin=can('view_all');
-  const rms=DATA.reimbursements.filter(r=>isAdmin||r.committee===currentUser.committee);
   const canAct=can('approve_reimbursement');
   let topActions='';
   if(currentUser.role==='member') topActions=`<button class="btn btn-gold btn-sm" onclick="openNewReimbursement()">+ Request Reimbursement</button>`;
   document.getElementById('top-actions').innerHTML=topActions;
+  const rms=getFilteredRm();
+  const committeeOpts=isAdmin?Object.values(DATA.committees).map(c=>`<option value="${c.id}">${c.icon} ${c.name}</option>`).join(''):'';
 
   document.getElementById('page-content').innerHTML=`
-  ${!canAct?`<div class="alert alert-info">⚠️ No receipt = no reimbursement. All requests require at least one receipt image to be approved.</div>`:''}
+  ${!canAct?`<div class="alert alert-info" style="margin-bottom:16px">⚠️ No receipt = no reimbursement. All requests require at least one receipt image to be approved.</div>`:''}
   <div class="card">
-    <div class="card-title"><span>⟳</span> Reimbursement Requests</div>
-    ${rms.length?rms.map(r=>rmCard(r,canAct)).join(''):`<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No reimbursement requests</div><div class="empty-sub">Submit a request using the button above</div></div>`}
+    <!-- Filter bar -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px">
+      <input id="rm-f-search" placeholder="🔍 Search reason…" oninput="filterRm()"
+        style="${selStyle};flex:1;min-width:160px"/>
+      <select id="rm-f-status" onchange="filterRm()" style="${selStyle}">
+        <option value="">All Status</option>
+        <option value="pending">⏳ Pending</option>
+        <option value="approved">✓ Approved</option>
+        <option value="rejected">✗ Rejected</option>
+      </select>
+      ${isAdmin?`<select id="rm-f-committee" onchange="filterRm()" style="${selStyle}">
+        <option value="">All Committees</option>${committeeOpts}
+      </select>`:`<select id="rm-f-committee" style="display:none"></select>`}
+      <select id="rm-f-receipt" onchange="filterRm()" style="${selStyle}">
+        <option value="">All Receipts</option>
+        <option value="yes">🧾 Has Receipt</option>
+        <option value="no">🚫 No Receipt</option>
+      </select>
+      <select id="rm-f-sort" onchange="filterRm()" style="${selStyle}">
+        <option value="date-desc">📅 Date: Newest first</option>
+        <option value="date-asc">📅 Date: Oldest first</option>
+        <option value="amount-desc">💰 Amount: Highest first</option>
+        <option value="amount-asc">💰 Amount: Lowest first</option>
+        <option value="alpha-asc">🔤 A → Z</option>
+        <option value="alpha-desc">🔤 Z → A</option>
+      </select>
+      <button onclick="clearRmFilters()" class="btn btn-ghost btn-sm">↺ Reset</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px" id="rm-count">${rms.length} request${rms.length!==1?'s':''} shown</div>
+    <div id="rm-list-wrap">
+      ${rms.length?rms.map(r=>rmCard(r,canAct)).join(''):`<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No reimbursement requests</div><div class="empty-sub">Submit a request using the button above</div></div>`}
+    </div>
   </div>`;
 }
+function clearRmFilters(){
+  ['rm-f-search','rm-f-status','rm-f-committee','rm-f-receipt','rm-f-sort'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){el.value=el.tagName==='SELECT'?(id==='rm-f-sort'?'date-desc':''):''}
+  });
+  filterRm();
+}
+window.filterRm=filterRm;window.clearRmFilters=clearRmFilters;
+
 function rmCard(r,canAct){
   const u=getUserById(r.requestedBy);
   const ab=r.approvedBy?getUserById(r.approvedBy):null;
@@ -993,37 +1133,139 @@ async function rejectReimbursement(id){
   toast('Reimbursement rejected','error');
 }
 
-// ── COMMITTEES ──
-function renderCommittees(){
+// ── COMMITTEES — overview + detail view ──
+function renderCommittees(focusId=null){
   const isAdmin=can('view_all');
   document.getElementById('top-actions').innerHTML='';
   const committees=Object.values(DATA.committees).filter(c=>isAdmin||c.id===currentUser.committee);
+
+  // If a committee is focused, show its detail page
+  if(focusId){
+    const c=DATA.committees[focusId];
+    if(!c){renderCommittees();return;}
+    const members=DATA.users.filter(u=>u.committee===c.id&&u.role==='member');
+    const supervisors=DATA.users.filter(u=>u.role==='supervisor');
+    const txs=DATA.transactions.filter(t=>t.committee===c.id).sort((a,b)=>b.date.localeCompare(a.date));
+    const rms=DATA.reimbursements.filter(r=>r.committee===c.id).sort((a,b)=>b.date.localeCompare(a.date));
+    const pct=c.allocated>0?Math.round((c.balance/c.allocated)*100):0;
+    const totalIncome=txs.filter(t=>t.type==='revenue'&&t.status==='approved').reduce((s,t)=>s+t.amount,0);
+    const totalExpense=txs.filter(t=>t.type==='expense'&&t.status==='approved').reduce((s,t)=>s+t.amount,0);
+    const avatarColors=['#c9a84c','#4f9cf9','#3ecf8e','#f5a623','#e05252','#a78bfa','#f472b6','#2dd4bf'];
+
+    document.getElementById('top-title').textContent=`${c.icon} ${c.name} Committee`;
+    document.getElementById('top-sub').textContent='Committee detail view';
+    document.getElementById('top-actions').innerHTML=`<button class="btn btn-ghost btn-sm" onclick="renderCommittees()">← All Committees</button>`;
+
+    document.getElementById('page-content').innerHTML=`
+    <!-- Stats row -->
+    <div class="stats-grid" style="margin-bottom:20px">
+      <div class="stat-card gold"><div class="stat-icon">💰</div><div class="stat-label">Allocated</div><div class="stat-value gold mono">${money(c.allocated)}</div></div>
+      <div class="stat-card green"><div class="stat-icon">🏦</div><div class="stat-label">Balance</div><div class="stat-value green mono">${money(c.balance)}</div></div>
+      <div class="stat-card blue"><div class="stat-icon">📥</div><div class="stat-label">Total Income</div><div class="stat-value blue mono">${money(totalIncome)}</div></div>
+      <div class="stat-card red"><div class="stat-icon">📤</div><div class="stat-label">Total Expenses</div><div class="stat-value red mono">${money(totalExpense)}</div></div>
+    </div>
+
+    <!-- Budget bar -->
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-weight:700">Budget Usage</span>
+        <span class="mono" style="font-size:13px">${money(c.balance)} remaining · ${100-pct}% spent</span>
+      </div>
+      <div class="prog-bar" style="height:10px"><div class="prog-fill ${c.color}" style="width:${pct}%"></div></div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:16px">
+      <!-- Members -->
+      <div class="card">
+        <div class="card-title"><span>👤</span> Members <span style="font-size:12px;color:var(--muted);font-weight:400">(${members.length})</span></div>
+        ${members.length?members.map((m,i)=>{
+          const bg=avatarColors[i%avatarColors.length];
+          return`<div class="member-row" style="margin-bottom:8px">
+            <div class="member-avatar" style="background:${bg}22;color:${bg}">${m.name.charAt(0)}</div>
+            <div class="member-info">
+              <div class="member-name">${m.name}</div>
+              <div class="member-username" style="font-size:11px;color:var(--muted)">${m.email||''}</div>
+            </div>
+            <span class="sidebar-badge badge-member">👤 Member</span>
+          </div>`;
+        }).join(''):`<div class="empty" style="padding:24px"><div class="empty-icon">👤</div><div class="empty-text" style="font-size:13px">No members assigned</div></div>`}
+      </div>
+
+      <!-- Supervisors -->
+      <div class="card">
+        <div class="card-title"><span>🔍</span> Supervisors <span style="font-size:12px;color:var(--muted);font-weight:400">(${supervisors.length})</span></div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Supervisors oversee all committees</div>
+        ${supervisors.length?supervisors.map((m,i)=>{
+          const bg=avatarColors[(i+3)%avatarColors.length];
+          return`<div class="member-row" style="margin-bottom:8px">
+            <div class="member-avatar" style="background:${bg}22;color:${bg}">${m.name.charAt(0)}</div>
+            <div class="member-info">
+              <div class="member-name">${m.name}</div>
+              <div class="member-username" style="font-size:11px;color:var(--muted)">${m.email||''}</div>
+            </div>
+            <span class="sidebar-badge badge-supervisor">🔍 Supervisor</span>
+          </div>`;
+        }).join(''):`<div class="empty" style="padding:24px"><div class="empty-icon">🔍</div><div class="empty-text" style="font-size:13px">No supervisors</div></div>`}
+      </div>
+    </div>
+
+    <!-- Transactions -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title"><span>↔</span> Transaction History <span style="font-size:12px;color:var(--muted);font-weight:400">(${txs.length})</span></div>
+      ${txs.length?`<div class="table-wrap"><table>
+        <thead><tr><th>Description</th><th>Amount</th><th>Type</th><th>Date</th><th>Status</th></tr></thead>
+        <tbody>${txs.map(t=>`<tr>
+          <td style="font-weight:600">${t.desc}</td>
+          <td class="mono" style="color:${t.type==='expense'?'var(--red)':'var(--green)'};font-weight:700">${t.type==='expense'?'-':'+'} ${money(t.amount)}</td>
+          <td><span class="tag tag-${t.type}">${t.type}</span></td>
+          <td style="color:var(--muted);font-size:12px">${formatDate(t.date)}</td>
+          <td><span class="status status-${t.status}">${t.status}</span></td>
+        </tr>`).join('')}</tbody>
+      </table></div>`:`<div class="empty" style="padding:24px"><div class="empty-icon">📭</div><div class="empty-text" style="font-size:13px">No transactions yet</div></div>`}
+    </div>
+
+    <!-- Reimbursements -->
+    <div class="card">
+      <div class="card-title"><span>⟳</span> Reimbursements <span style="font-size:12px;color:var(--muted);font-weight:400">(${rms.length})</span></div>
+      ${rms.length?rms.map(r=>{
+        const u=getUserById(r.requestedBy);
+        return`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+          <div>
+            <div style="font-weight:600;font-size:13px">${r.reason}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${u?.name||'?'} · ${formatDate(r.date)} ${r.receipts?.length?`· 🧾 ${r.receipts.length} receipt`:'· 🚫 No receipt'}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="mono" style="font-weight:700;color:var(--gold)">${money(r.amount)}</span>
+            <span class="status status-${r.status}">${r.status}</span>
+          </div>
+        </div>`;
+      }).join(''):`<div class="empty" style="padding:24px"><div class="empty-icon">🧾</div><div class="empty-text" style="font-size:13px">No reimbursements</div></div>`}
+    </div>`;
+    return;
+  }
+
+  // Overview — clickable cards
   document.getElementById('page-content').innerHTML=`
-  <div class="grid-2" style="margin-bottom:24px">
+  <div class="grid-2">
     ${committees.map(c=>{
-      const members=DATA.users.filter(u=>u.committee===c.id);
-      const recentTx=DATA.transactions.filter(t=>t.committee===c.id).slice(-3).reverse();
-      const pct=Math.round((c.balance/c.allocated)*100);
-      return`<div class="committee-card">
+      const members=DATA.users.filter(u=>u.committee===c.id&&u.role==='member');
+      const recentTx=DATA.transactions.filter(t=>t.committee===c.id).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,3);
+      const pct=c.allocated>0?Math.round((c.balance/c.allocated)*100):0;
+      return`<div class="committee-card" onclick="renderCommittees('${c.id}')" style="cursor:pointer">
         <div class="committee-header">
           <div class="committee-avatar" style="background:${avatarBg(c.color)}">${c.icon}</div>
-          <div>
+          <div style="flex:1">
             <div class="committee-name">${c.name} Committee</div>
             <div class="committee-type">${members.length} member${members.length!==1?'s':''}</div>
           </div>
+          <span style="font-size:11px;color:var(--muted);font-weight:500">View → </span>
         </div>
         <div class="committee-stats" style="margin-bottom:16px">
-          <div class="cstat">
-            <div class="cstat-label">Allocated</div>
-            <div class="cstat-value">${money(c.allocated)}</div>
-          </div>
-          <div class="cstat">
-            <div class="cstat-label">Balance</div>
-            <div class="cstat-value" style="color:${pct<30?'var(--red)':pct<60?'var(--orange)':'var(--green)'}">${money(c.balance)}</div>
-          </div>
+          <div class="cstat"><div class="cstat-label">Allocated</div><div class="cstat-value">${money(c.allocated)}</div></div>
+          <div class="cstat"><div class="cstat-label">Balance</div><div class="cstat-value" style="color:${pct<30?'var(--red)':pct<60?'var(--orange)':'var(--green)'}">${money(c.balance)}</div></div>
         </div>
         <div style="margin-bottom:14px">
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px"><span>Budget usage</span><span>${100-pct}% spent</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px"><span>Budget usage</span><span>${100-pct}% remaining</span></div>
           <div class="prog-bar"><div class="prog-fill ${c.color}" style="width:${pct}%"></div></div>
         </div>
         <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:8px">Recent Activity</div>
@@ -1035,6 +1277,7 @@ function renderCommittees(){
     }).join('')}
   </div>`;
 }
+window.renderCommittees=renderCommittees;
 
 // ── TRANSPARENCY ──
 function renderTransparency(){
