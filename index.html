@@ -261,22 +261,6 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .img-zoom-overlay.open{display:flex}
 .img-zoom-overlay img{max-width:90vw;max-height:90vh;border-radius:10px;object-fit:contain}
 @media(max-width:900px){.stats-grid{grid-template-columns:1fr 1fr}.grid-2{grid-template-columns:1fr}.grid-3{grid-template-columns:1fr}}
-/* ── CUSTOM DROPDOWN ── */
-.cd{position:relative;display:inline-block;user-select:none}
-.cd-btn{display:flex;align-items:center;gap:6px;padding:7px 12px;background:var(--navy2);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:var(--white);font-size:12px;font-family:'Syne',sans-serif;cursor:pointer;white-space:nowrap;min-width:130px;justify-content:space-between}
-.cd-btn:hover{border-color:var(--gold)}
-.cd-btn .cd-arrow{font-size:9px;color:var(--muted);transition:transform .18s}
-.cd.open .cd-btn{border-color:var(--gold);background:var(--navy3)}
-.cd.open .cd-arrow{transform:rotate(180deg)}
-.cd-menu{position:absolute;top:calc(100% + 4px);left:0;min-width:100%;background:var(--navy2);border:1px solid rgba(255,255,255,.15);border-radius:8px;z-index:500;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.4);display:none}
-.cd.open .cd-menu{display:block}
-.cd-opt{padding:9px 14px;font-size:12px;font-family:'Syne',sans-serif;color:var(--white);cursor:pointer;transition:background .12s;white-space:nowrap}
-.cd-opt:hover{background:rgba(255,255,255,.06)}
-.cd-opt.selected{background:rgba(201,168,76,.12);color:var(--gold)}
-/* keep native selects for form fields inside modals but hide them */
-.form-group select{background:var(--navy2);color:var(--white);color-scheme:dark}
-.form-group select option,.field-group select option{background:var(--navy2);color:var(--white)}
-.field-group select{background:var(--navy2);color:var(--white);color-scheme:dark}
 </style>
 </head>
 <body>
@@ -304,39 +288,36 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <span>Stuco<em>Vault</em></span>
     </div>
     <div class="login-title">Sign in to your account</div>
-    <div class="login-sub">Use your @icsabidjan.org school email</div>
-
-    <!-- LOGIN FORM -->
-    <div id="login-form-view">
-      <div class="field-group">
-        <label>School Email</label>
-        <input type="email" id="login-email" placeholder="yourname@icsabidjan.org"/>
-      </div>
-      <div class="field-group">
-        <label>Password</label>
-        <input type="password" id="login-password" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"/>
-      </div>
-      <p class="error-msg" id="login-error">Incorrect email or password.</p>
-      <button class="btn btn-gold" onclick="doLogin()" style="margin-top:12px">Sign In →</button>
-      <div style="text-align:center;margin-top:16px">
-        <span onclick="showForgotPassword()" style="font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;transition:var(--trans)" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--muted)'">Forgot your password?</span>
-      </div>
+    <div class="login-sub">Student Council Fund Management</div>
+    <div class="field-group">
+      <label>Username</label>
+      <input type="text" id="login-username" placeholder="Enter username"/>
     </div>
-
-    <!-- FORGOT PASSWORD FORM -->
-    <div id="forgot-form-view" style="display:none">
-      <div style="background:rgba(79,156,249,.08);border:1px solid rgba(79,156,249,.2);border-radius:8px;padding:14px;font-size:12px;color:var(--blue);margin-bottom:20px">
-        📧 Enter your school email and we'll send you a password reset link instantly.
-      </div>
-      <div class="field-group">
-        <label>School Email</label>
-        <input type="email" id="reset-email" placeholder="yourname@icsabidjan.org" onkeydown="if(event.key==='Enter')doResetPassword()"/>
-      </div>
-      <p class="error-msg" id="reset-error">Email not found. Check the address and try again.</p>
-      <p id="reset-success" style="color:var(--green);font-size:12px;margin-top:8px;display:none">✓ Reset email sent! Check your inbox.</p>
-      <button class="btn btn-gold" onclick="doResetPassword()" style="margin-top:12px">Send Reset Email →</button>
-      <div style="text-align:center;margin-top:16px">
-        <span onclick="showLoginForm()" style="font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--muted)'">← Back to sign in</span>
+    <div class="field-group">
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <p class="error-msg" id="login-error">Incorrect username or password.</p>
+    <button class="btn btn-gold" onclick="doLogin()" style="margin-top:12px">Sign In →</button>
+    <div class="login-demo">
+      <p>Demo accounts — click to auto-fill</p>
+      <div class="demo-users">
+        <div class="demo-user" onclick="fillDemo('treasurer','vault123')">
+          <div class="demo-user-info">treasurer</div>
+          <div class="demo-user-role">🏛 Treasurer · vault123</div>
+        </div>
+        <div class="demo-user" onclick="fillDemo('supervisor','vault123')">
+          <div class="demo-user-info">supervisor</div>
+          <div class="demo-user-role">🔍 Supervisor · vault123</div>
+        </div>
+        <div class="demo-user" onclick="fillDemo('alice','vault123')">
+          <div class="demo-user-info">alice</div>
+          <div class="demo-user-role">👤 Member (Sports) · vault123</div>
+        </div>
+        <div class="demo-user" onclick="fillDemo('ben','vault123')">
+          <div class="demo-user-info">ben</div>
+          <div class="demo-user-role">👤 Member (Spirit) · vault123</div>
+        </div>
       </div>
     </div>
   </div>
@@ -389,7 +370,6 @@ tr:hover td{background:rgba(255,255,255,.02)}
 // ═══════════════════════════════════════════════
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, doc, getDocs, getDoc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, onAuthStateChanged, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAhF23yUTdoPP7_ZOE6z6FtOT8NZHUCgQI",
@@ -402,7 +382,6 @@ const firebaseConfig = {
 
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
-const auth = getAuth(firebaseApp);
 
 // ═══════════════════════════════════════════════
 //  LIVE DATA STORE (synced from Firestore)
@@ -458,8 +437,8 @@ const SEED = {
   },
 };
 
-// ── FORCE UPDATE — keep false unless you need to reseed ──
-const FORCE_RESEED = false;
+// ── FORCE UPDATE — set to true to overwrite Firestore with SEED data ──
+const FORCE_RESEED = true;
 
 let currentUser = null;
 let currentPage = 'dashboard';
@@ -477,8 +456,9 @@ function hideLoading(){
 // ── Seed Firestore with real data ──
 async function seedIfEmpty(){
   const usersSnap = await getDocs(collection(db,'users'));
-  if(!usersSnap.empty && !FORCE_RESEED) return;
+  if(!usersSnap.empty && !FORCE_RESEED) return; // already seeded
   showLoading('Setting up your database…');
+  // clear old data if force reseeding
   if(FORCE_RESEED){
     for(const d of (await getDocs(collection(db,'users'))).docs) await deleteDoc(doc(db,'users',d.id));
     for(const d of (await getDocs(collection(db,'committees'))).docs) await deleteDoc(doc(db,'committees',d.id));
@@ -490,54 +470,10 @@ async function seedIfEmpty(){
   for(const c of SEED.committees) await setDoc(doc(db,'committees',c.id),c);
   for(const t of SEED.transactions) await setDoc(doc(db,'transactions',t.id),t);
   for(const r of SEED.reimbursements) await setDoc(doc(db,'reimbursements',r.id),r);
-  const ccSnap2=await getDocs(collection(db,'cashcounter'));
-  if(ccSnap2.empty) await addDoc(collection(db,'cashcounter'),SEED.cashCounter);
+  await addDoc(collection(db,'cashcounter'),SEED.cashCounter);
 }
 
-// ── Bootstrap — use Firebase Auth to persist sessions ──
-async function init(){
-  showLoading('Connecting to database…');
-  try{
-    document.getElementById('loading-msg').textContent='Step 1: Connecting to Firestore…';
-    await seedIfEmpty();
-    document.getElementById('loading-msg').textContent='Step 2: Loading data…';
-    await loadAllData();
-    document.getElementById('loading-msg').textContent='Step 3: Setting up listeners…';
-    setupListeners();
-    dbReady=true;
-    document.getElementById('loading-msg').textContent='Step 4: Checking auth session…';
-    // Use a timeout fallback so we never get permanently stuck
-    const authTimeout=setTimeout(()=>{
-      hideLoading();
-      document.getElementById('login-screen').style.display='flex';
-    },5000);
-    onAuthStateChanged(auth, async(firebaseUser)=>{
-      clearTimeout(authTimeout);
-      if(firebaseUser){
-        document.getElementById('loading-msg').textContent='Signing you in…';
-        const profile = DATA.users.find(u=>u.email===firebaseUser.email||u.id===firebaseUser.uid);
-        if(profile){
-          currentUser=profile;
-          hideLoading();
-          document.getElementById('login-screen').style.display='none';
-          document.getElementById('app').style.display='flex';
-          setupSidebar();
-          navigateTo('dashboard');
-        } else {
-          hideLoading();
-          document.getElementById('login-screen').style.display='flex';
-        }
-      } else {
-        hideLoading();
-        document.getElementById('login-screen').style.display='flex';
-      }
-    });
-  } catch(e){
-    console.error('StucoVault init error:',e);
-    document.getElementById('loading-msg').textContent='⚠️ Error: '+e.message+' — Please check Firebase console and refresh.';
-  }
-}
-init();
+// ── Load all data from Firestore into DATA ──
 async function loadAllData(){
   const [usersSnap,committeesSnap,txSnap,rmSnap,ccSnap] = await Promise.all([
     getDocs(collection(db,'users')),
@@ -587,6 +523,22 @@ async function dbUpdate(col,id,data){ await updateDoc(doc(db,col,id),data); }
 async function dbAdd(col,data){ const ref=await addDoc(collection(db,col),data); return ref.id; }
 async function dbDelete(col,id){ await deleteDoc(doc(db,col,id)); }
 
+// ── Bootstrap ──
+async function init(){
+  showLoading('Connecting to database…');
+  try{
+    await seedIfEmpty();
+    await loadAllData();
+    setupListeners();
+    dbReady=true;
+    hideLoading();
+    document.getElementById('login-screen').style.display='flex';
+  } catch(e){
+    console.error(e);
+    document.getElementById('loading-msg').textContent='⚠️ Could not connect to database. Check your internet connection.';
+  }
+}
+init();
 
 // ═══════════════════════════════════════════════
 //  HELPERS
@@ -597,60 +549,6 @@ function money(n){return Number(n).toLocaleString('fr-FR')+' CFA'}
 function formatDate(d){if(!d)return'—';const[y,m,day]=d.split('-');const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return`${months[parseInt(m)-1]} ${parseInt(day)}, ${y}`}
 function genId(){return'x'+Math.random().toString(36).slice(2,8)}
 function today(){return new Date().toISOString().slice(0,10)}
-const selStyle=`padding:7px 12px;background:var(--navy2);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:var(--white);font-size:12px;font-family:'Syne',sans-serif;outline:none;cursor:pointer`;
-
-// ── Custom Dropdown helpers ──
-// Usage: cdCreate(id, options, onChange, defaultLabel)
-// options = [{value, label}]
-function cdCreate(id, options, onChange, defaultVal=''){
-  const wrap=document.createElement('div');
-  wrap.className='cd';wrap.id='cd-'+id;
-  const current=options.find(o=>o.value===defaultVal)||options[0];
-  wrap.innerHTML=`<div class="cd-btn" onclick="cdToggle('${id}')"><span class="cd-label">${current.label}</span><span class="cd-arrow">▼</span></div>
-  <div class="cd-menu">${options.map(o=>`<div class="cd-opt${o.value===defaultVal?' selected':''}" data-val="${o.value}" onclick="cdSelect('${id}','${o.value}',this)">${o.label}</div>`).join('')}</div>`;
-  wrap._onChange=onChange;
-  wrap._value=defaultVal;
-  return wrap;
-}
-function cdToggle(id){
-  const el=document.getElementById('cd-'+id);
-  if(!el)return;
-  // close all others
-  document.querySelectorAll('.cd.open').forEach(d=>{if(d!==el)d.classList.remove('open')});
-  el.classList.toggle('open');
-}
-function cdSelect(id,val,optEl){
-  const el=document.getElementById('cd-'+id);
-  if(!el)return;
-  el._value=val;
-  el.querySelector('.cd-label').textContent=optEl.textContent;
-  el.querySelectorAll('.cd-opt').forEach(o=>o.classList.toggle('selected',o===optEl));
-  el.classList.remove('open');
-  if(el._onChange) el._onChange(val);
-}
-function cdVal(id){
-  const el=document.getElementById('cd-'+id);
-  return el?el._value:'';
-}
-// Close dropdowns when clicking outside
-document.addEventListener('click',e=>{
-  if(!e.target.closest('.cd')) document.querySelectorAll('.cd.open').forEach(d=>d.classList.remove('open'));
-});
-window.cdToggle=cdToggle;window.cdSelect=cdSelect;
-function txRow(t,canAct){
-  const u=getUserById(t.createdBy);
-  const ab=t.approvedBy?getUserById(t.approvedBy):null;
-  return`<tr id="tr-${t.id}">
-    <td><div style="font-weight:600">${t.desc}</div>${t.approvedBy?`<div style="font-size:10px;color:var(--muted);margin-top:2px">${t.status==='approved'?'✓':'✗'} by ${ab?.name||'?'} on ${formatDate(t.approvedDate)}</div>`:''}</td>
-    <td>${committeeTag(t.committee)}</td>
-    <td class="mono" style="color:${t.type==='expense'?'var(--red)':'var(--green)'};font-weight:700">${t.type==='expense'?'-':'+'} ${money(t.amount)}</td>
-    <td><span class="tag tag-${t.type}">${t.type}</span></td>
-    <td><div style="font-size:13px">${u?.name||'?'}</div><div style="font-size:10px;color:var(--muted)">${u?.email||''}</div></td>
-    <td style="color:var(--muted);font-size:12px">${formatDate(t.date)}</td>
-    <td><span class="status status-${t.status}">${t.status}</span></td>
-    ${canAct&&t.status==='pending'?`<td><div style="display:flex;gap:6px"><button class="btn btn-green btn-sm" onclick="approveTransaction('${t.id}')">Approve</button><button class="btn btn-red btn-sm" onclick="rejectTransaction('${t.id}')">Reject</button></div></td>`:canAct?'<td style="color:var(--muted);font-size:12px">Reviewed</td>':''}
-  </tr>`;
-}
 function can(action){
   const r=currentUser.role;
   const perms={
@@ -680,90 +578,30 @@ function committeeTag(id){
 // ═══════════════════════════════════════════════
 //  AUTH
 // ═══════════════════════════════════════════════
-// ── Login/logout toggle helpers ──
-function showForgotPassword(){
-  document.getElementById('login-form-view').style.display='none';
-  document.getElementById('forgot-form-view').style.display='block';
-  document.getElementById('reset-error').style.display='none';
-  document.getElementById('reset-success').style.display='none';
+function fillDemo(u,p){
+  document.getElementById('login-username').value=u;
+  document.getElementById('login-password').value=p;
 }
-function showLoginForm(){
-  document.getElementById('forgot-form-view').style.display='none';
-  document.getElementById('login-form-view').style.display='block';
-  document.getElementById('login-error').style.display='none';
-}
-
-async function doLogin(){
-  const email=document.getElementById('login-email').value.trim();
-  const password=document.getElementById('login-password').value;
+function doLogin(){
+  const u=document.getElementById('login-username').value.trim();
+  const p=document.getElementById('login-password').value;
   const err=document.getElementById('login-error');
+  const user=DATA.users.find(x=>x.username===u&&x.password===p);
+  if(!user){err.style.display='block';return}
   err.style.display='none';
-  if(!email||!password){err.textContent='Please enter your email and password.';err.style.display='block';return}
-  if(!email.endsWith('@icsabidjan.org')){err.textContent='Please use your @icsabidjan.org school email.';err.style.display='block';return}
-  try{
-    showLoading('Signing in…');
-    const cred=await signInWithEmailAndPassword(auth,email,password);
-    // Find matching profile in Firestore by email or uid
-    let profile=DATA.users.find(u=>u.email===email||u.id===cred.user.uid);
-    if(!profile){
-      // Try to match by uid stored in Firestore
-      const snap=await getDoc(doc(db,'users',cred.user.uid));
-      if(snap.exists()) profile={...snap.data(),id:snap.id};
-    }
-    if(!profile){
-      await signOut(auth);
-      hideLoading();
-      err.textContent='Account not found. Contact your treasurer to be added.';err.style.display='block';return;
-    }
-    currentUser=profile;
-    hideLoading();
-    document.getElementById('login-screen').style.display='none';
-    document.getElementById('app').style.display='flex';
-    setupSidebar();
-    navigateTo('dashboard');
-  } catch(e){
-    hideLoading();
-    if(e.code==='auth/user-not-found'||e.code==='auth/wrong-password'||e.code==='auth/invalid-credential'){
-      err.textContent='Incorrect email or password.';
-    } else if(e.code==='auth/too-many-requests'){
-      err.textContent='Too many attempts. Please try again later.';
-    } else {
-      err.textContent='Sign in failed: '+e.message;
-    }
-    err.style.display='block';
-  }
+  currentUser=user;
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  setupSidebar();
+  navigateTo('dashboard');
 }
-
-async function doResetPassword(){
-  const email=document.getElementById('reset-email').value.trim();
-  const err=document.getElementById('reset-error');
-  const succ=document.getElementById('reset-success');
-  err.style.display='none';succ.style.display='none';
-  if(!email){err.textContent='Please enter your school email.';err.style.display='block';return}
-  if(!email.endsWith('@icsabidjan.org')){err.textContent='Please use your @icsabidjan.org school email.';err.style.display='block';return}
-  try{
-    await sendPasswordResetEmail(auth,email);
-    succ.style.display='block';
-    document.getElementById('reset-email').value='';
-  } catch(e){
-    if(e.code==='auth/user-not-found'){
-      err.textContent='No account found with this email.';
-    } else {
-      err.textContent='Could not send reset email: '+e.message;
-    }
-    err.style.display='block';
-  }
-}
-
-async function doLogout(){
-  await signOut(auth);
+function doLogout(){
   currentUser=null;
   currentPage='dashboard';
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('app').style.display='none';
-  document.getElementById('login-email').value='';
+  document.getElementById('login-username').value='';
   document.getElementById('login-password').value='';
-  showLoginForm();
 }
 
 // ═══════════════════════════════════════════════
@@ -774,7 +612,7 @@ function setupSidebar(){
   const un=document.getElementById('sb-username');
   const b=document.getElementById('sb-badge');
   n.textContent=currentUser.name;
-  un.textContent=currentUser.email||('@'+currentUser.username)||'';
+  un.textContent='@'+currentUser.username;
   const bMap={treasurer:'badge-treasurer 🏛 Treasurer',supervisor:'badge-supervisor 🔍 Supervisor',member:'badge-member 👤 Member'};
   const [cls,txt]=bMap[currentUser.role].split(' ');
   b.className='sidebar-badge '+cls;
@@ -933,121 +771,58 @@ function renderDashboard(){
 }
 
 // ── TRANSACTIONS ──
-function getFilteredTx(){
-  const isAdmin=can('view_all');
-  const status=cdVal('tx-status');
-  const type=cdVal('tx-type');
-  const committee=cdVal('tx-committee');
-  const search=document.getElementById('tx-f-search')?.value?.toLowerCase()||'';
-  const sort=cdVal('tx-sort')||'date-desc';
-  let txs=DATA.transactions.filter(t=>{
-    if(!isAdmin&&t.committee!==currentUser.committee) return false;
-    if(status&&t.status!==status) return false;
-    if(type&&t.type!==type) return false;
-    if(committee&&t.committee!==committee) return false;
-    if(search&&!t.desc.toLowerCase().includes(search)) return false;
-    return true;
-  });
-  txs.sort((a,b)=>{
-    switch(sort){
-      case 'date-desc': return b.date.localeCompare(a.date);
-      case 'date-asc': return a.date.localeCompare(b.date);
-      case 'amount-desc': return b.amount-a.amount;
-      case 'amount-asc': return a.amount-b.amount;
-      case 'alpha-asc': return a.desc.localeCompare(b.desc);
-      case 'alpha-desc': return b.desc.localeCompare(a.desc);
-      default: return b.date.localeCompare(a.date);
-    }
-  });
-  return txs;
-}
-function filterTx(){
-  const canAct=can('approve_transaction');
-  const txs=getFilteredTx();
-  const tbody=document.getElementById('tx-tbody');
-  const wrap=document.getElementById('tx-table-wrap');
-  if(!tbody||!wrap) return;
-  if(!txs.length){
-    wrap.innerHTML=`<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">No transactions match your filters</div><div class="empty-sub">Try adjusting the filters above</div></div>`;
-    return;
-  }
-  wrap.innerHTML=`<table><thead><tr><th>Description</th><th>Committee</th><th>Amount</th><th>Type</th><th>Created By</th><th>Date</th><th>Status</th>${canAct?'<th>Action</th>':''}</tr></thead><tbody id="tx-tbody">${txs.map(t=>txRow(t,canAct)).join('')}</tbody></table>`;
-}
 function renderTransactions(){
   const isAdmin=can('view_all');
+  const txs=DATA.transactions.filter(t=>isAdmin||t.committee===currentUser.committee);
   const canAct=can('approve_transaction');
+
   let topActions='';
   if(currentUser.role==='member') topActions=`<button class="btn btn-gold btn-sm" onclick="openNewTransaction()">+ New Transaction</button>`;
-  if(canAct) topActions=`<button class="btn btn-gold btn-sm" onclick="openNewTransaction()">+ Log Transaction</button>`;
+  if(can('approve_transaction')) topActions=`<button class="btn btn-gold btn-sm" onclick="openNewTransaction()">+ Log Transaction</button>`;
   document.getElementById('top-actions').innerHTML=topActions;
-  const txs=getFilteredTx();
-  const committeeOpts=isAdmin?Object.values(DATA.committees).map(c=>`<option value="${c.id}">${c.icon} ${c.name}</option>`).join(''):'';
 
   document.getElementById('page-content').innerHTML=`
   <div class="card">
-    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px" id="tx-filter-bar">
-      <input id="tx-f-search" placeholder="🔍 Search description…" oninput="filterTx()"
-        style="padding:7px 12px;background:var(--navy2);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:var(--white);font-size:12px;font-family:'Syne',sans-serif;flex:1;min-width:160px;outline:none"/>
-      <span id="cd-tx-status-wrap"></span>
-      <span id="cd-tx-type-wrap"></span>
-      ${isAdmin?`<span id="cd-tx-committee-wrap"></span>`:''}
-      <span id="cd-tx-sort-wrap"></span>
-      <button onclick="clearTxFilters()" class="btn btn-ghost btn-sm">↺ Reset</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:0"><span>↔</span> All Transactions</div>
+      <div style="display:flex;gap:8px">
+        <select onchange="filterTx(this.value)" style="padding:7px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:var(--white);font-size:12px;font-family:'Syne',sans-serif">
+          <option value="">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
     </div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:12px" id="tx-count">${txs.length} transaction${txs.length!==1?'s':''} shown</div>
-    <div id="tx-table-wrap">
+    <div class="table-wrap" id="tx-table-wrap">
     ${txs.length?`<table>
       <thead><tr><th>Description</th><th>Committee</th><th>Amount</th><th>Type</th><th>Created By</th><th>Date</th><th>Status</th>${canAct?'<th>Action</th>':''}</tr></thead>
       <tbody id="tx-tbody">${txs.map(t=>txRow(t,canAct)).join('')}</tbody>
-    </table>`:`<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No transactions found</div></div>`}
+    </table>`:`<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No transactions found</div><div class="empty-sub">Transactions you create will appear here</div></div>`}
     </div>
   </div>`;
-
-  // Build custom dropdowns after HTML is rendered
-  const statusDD=cdCreate('tx-status',[
-    {value:'',label:'All Status'},{value:'pending',label:'⏳ Pending'},
-    {value:'approved',label:'✓ Approved'},{value:'rejected',label:'✗ Rejected'}
-  ],()=>filterTx(),'');
-  document.getElementById('cd-tx-status-wrap')?.replaceWith(statusDD);
-
-  const typeDD=cdCreate('tx-type',[
-    {value:'',label:'All Types'},{value:'expense',label:'📤 Expense'},{value:'revenue',label:'📥 Revenue'}
-  ],()=>filterTx(),'');
-  document.getElementById('cd-tx-type-wrap')?.replaceWith(typeDD);
-
-  if(isAdmin){
-    const committeeDD=cdCreate('tx-committee',[
-      {value:'',label:'All Committees'},
-      ...Object.values(DATA.committees).map(c=>({value:c.id,label:c.icon+' '+c.name}))
-    ],()=>filterTx(),'');
-    document.getElementById('cd-tx-committee-wrap')?.replaceWith(committeeDD);
-  }
-
-  const sortDD=cdCreate('tx-sort',[
-    {value:'date-desc',label:'📅 Newest first'},{value:'date-asc',label:'📅 Oldest first'},
-    {value:'amount-desc',label:'💰 Highest first'},{value:'amount-asc',label:'💰 Lowest first'},
-    {value:'alpha-asc',label:'🔤 A → Z'},{value:'alpha-desc',label:'🔤 Z → A'}
-  ],()=>filterTx(),'date-desc');
-  document.getElementById('cd-tx-sort-wrap')?.replaceWith(sortDD);
 }
-function clearTxFilters(){
-  const search=document.getElementById('tx-f-search');
-  if(search) search.value='';
-  // Reset custom dropdowns
-  ['tx-status','tx-type','tx-committee','tx-sort'].forEach(id=>{
-    const el=document.getElementById('cd-'+id);
-    if(!el) return;
-    const defaultVal=id==='tx-sort'?'date-desc':'';
-    el._value=defaultVal;
-    const firstOpt=el.querySelector(`.cd-opt[data-val="${defaultVal}"]`)||el.querySelector('.cd-opt');
-    if(firstOpt){
-      el.querySelector('.cd-label').textContent=firstOpt.textContent;
-      el.querySelectorAll('.cd-opt').forEach(o=>o.classList.toggle('selected',o===firstOpt));
-    }
-  });
-  filterTx();
+function txRow(t,canAct){
+  const u=getUserById(t.createdBy);
+  const ab=t.approvedBy?getUserById(t.approvedBy):null;
+  return`<tr id="tr-${t.id}">
+    <td><div style="font-weight:600">${t.desc}</div>${t.approvedBy?`<div style="font-size:10px;color:var(--muted);margin-top:2px">${t.status==='approved'?'✓':'✗'} by ${ab?.name||'?'} on ${formatDate(t.approvedDate)}</div>`:''}</td>
+    <td>${committeeTag(t.committee)}</td>
+    <td class="mono" style="color:${t.type==='expense'?'var(--red)':'var(--green)'};font-weight:700">${t.type==='expense'?'-':'+'} ${money(t.amount)}</td>
+    <td><span class="tag tag-${t.type}">${t.type}</span></td>
+    <td><div style="font-size:13px">${u?.name||'?'}</div><div style="font-size:10px;color:var(--muted)">@${u?.username||'?'}</div></td>
+    <td style="color:var(--muted);font-size:12px">${formatDate(t.date)}</td>
+    <td><span class="status status-${t.status}">${t.status}</span></td>
+    ${canAct&&t.status==='pending'?`<td><div style="display:flex;gap:6px"><button class="btn btn-green btn-sm" onclick="approveTransaction('${t.id}')">Approve</button><button class="btn btn-red btn-sm" onclick="rejectTransaction('${t.id}')">Reject</button></div></td>`:canAct?'<td style="color:var(--muted);font-size:12px">Reviewed</td>':''}
+  </tr>`;
 }
-window.clearTxFilters=clearTxFilters;
+function filterTx(status){
+  const isAdmin=can('view_all');
+  const txs=DATA.transactions.filter(t=>(isAdmin||t.committee===currentUser.committee)&&(!status||t.status===status));
+  const canAct=can('approve_transaction');
+  const tbody=document.getElementById('tx-tbody');
+  if(tbody) tbody.innerHTML=txs.map(t=>txRow(t,canAct)).join('');
+}
 async function approveTransaction(id){
   const t=DATA.transactions.find(x=>x.id===id);
   if(!t)return;
@@ -1068,112 +843,21 @@ async function rejectTransaction(id){
 }
 
 // ── REIMBURSEMENTS ──
-function getFilteredRm(){
-  const isAdmin=can('view_all');
-  const status=cdVal('rm-status');
-  const committee=cdVal('rm-committee');
-  const receipt=cdVal('rm-receipt');
-  const search=document.getElementById('rm-f-search')?.value?.toLowerCase()||'';
-  const sort=cdVal('rm-sort')||'date-desc';
-  let rms=DATA.reimbursements.filter(r=>{
-    if(!isAdmin&&r.committee!==currentUser.committee) return false;
-    if(status&&r.status!==status) return false;
-    if(committee&&r.committee!==committee) return false;
-    if(receipt==='yes'&&(!r.receipts||r.receipts.length===0)) return false;
-    if(receipt==='no'&&r.receipts&&r.receipts.length>0) return false;
-    if(search&&!r.reason.toLowerCase().includes(search)) return false;
-    return true;
-  });
-  rms.sort((a,b)=>{
-    switch(sort){
-      case 'date-desc': return b.date.localeCompare(a.date);
-      case 'date-asc': return a.date.localeCompare(b.date);
-      case 'amount-desc': return b.amount-a.amount;
-      case 'amount-asc': return a.amount-b.amount;
-      case 'alpha-asc': return a.reason.localeCompare(b.reason);
-      case 'alpha-desc': return b.reason.localeCompare(a.reason);
-      default: return b.date.localeCompare(a.date);
-    }
-  });
-  return rms;
-}
-function filterRm(){
-  const canAct=can('approve_reimbursement');
-  const rms=getFilteredRm();
-  const wrap=document.getElementById('rm-list-wrap');
-  if(!wrap) return;
-  const count=document.getElementById('rm-count');
-  if(count) count.textContent=`${rms.length} request${rms.length!==1?'s':''} shown`;
-  wrap.innerHTML=rms.length?rms.map(r=>rmCard(r,canAct)).join(''):`<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">No reimbursements match your filters</div></div>`;
-}
 function renderReimbursements(){
   const isAdmin=can('view_all');
+  const rms=DATA.reimbursements.filter(r=>isAdmin||r.committee===currentUser.committee);
   const canAct=can('approve_reimbursement');
   let topActions='';
   if(currentUser.role==='member') topActions=`<button class="btn btn-gold btn-sm" onclick="openNewReimbursement()">+ Request Reimbursement</button>`;
   document.getElementById('top-actions').innerHTML=topActions;
-  const rms=getFilteredRm();
-  const committeeOpts=isAdmin?Object.values(DATA.committees).map(c=>`<option value="${c.id}">${c.icon} ${c.name}</option>`).join(''):'';
 
   document.getElementById('page-content').innerHTML=`
-  ${!canAct?`<div class="alert alert-info" style="margin-bottom:16px">⚠️ No receipt = no reimbursement. All requests require at least one receipt image to be approved.</div>`:''}
+  ${!canAct?`<div class="alert alert-info">⚠️ No receipt = no reimbursement. All requests require at least one receipt image to be approved.</div>`:''}
   <div class="card">
-    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px" id="rm-filter-bar">
-      <input id="rm-f-search" placeholder="🔍 Search reason…" oninput="filterRm()"
-        style="padding:7px 12px;background:var(--navy2);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:var(--white);font-size:12px;font-family:'Syne',sans-serif;flex:1;min-width:160px;outline:none"/>
-      <span id="cd-rm-status-wrap"></span>
-      ${isAdmin?`<span id="cd-rm-committee-wrap"></span>`:''}
-      <span id="cd-rm-receipt-wrap"></span>
-      <span id="cd-rm-sort-wrap"></span>
-      <button onclick="clearRmFilters()" class="btn btn-ghost btn-sm">↺ Reset</button>
-    </div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:12px" id="rm-count">${rms.length} request${rms.length!==1?'s':''} shown</div>
-    <div id="rm-list-wrap">
-      ${rms.length?rms.map(r=>rmCard(r,canAct)).join(''):`<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No reimbursement requests</div><div class="empty-sub">Submit a request using the button above</div></div>`}
-    </div>
+    <div class="card-title"><span>⟳</span> Reimbursement Requests</div>
+    ${rms.length?rms.map(r=>rmCard(r,canAct)).join(''):`<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No reimbursement requests</div><div class="empty-sub">Submit a request using the button above</div></div>`}
   </div>`;
-
-  // Build custom dropdowns
-  document.getElementById('cd-rm-status-wrap')?.replaceWith(cdCreate('rm-status',[
-    {value:'',label:'All Status'},{value:'pending',label:'⏳ Pending'},
-    {value:'approved',label:'✓ Approved'},{value:'rejected',label:'✗ Rejected'}
-  ],()=>filterRm(),''));
-
-  if(isAdmin){
-    document.getElementById('cd-rm-committee-wrap')?.replaceWith(cdCreate('rm-committee',[
-      {value:'',label:'All Committees'},
-      ...Object.values(DATA.committees).map(c=>({value:c.id,label:c.icon+' '+c.name}))
-    ],()=>filterRm(),''));
-  }
-
-  document.getElementById('cd-rm-receipt-wrap')?.replaceWith(cdCreate('rm-receipt',[
-    {value:'',label:'All Receipts'},{value:'yes',label:'🧾 Has Receipt'},{value:'no',label:'🚫 No Receipt'}
-  ],()=>filterRm(),''));
-
-  document.getElementById('cd-rm-sort-wrap')?.replaceWith(cdCreate('rm-sort',[
-    {value:'date-desc',label:'📅 Newest first'},{value:'date-asc',label:'📅 Oldest first'},
-    {value:'amount-desc',label:'💰 Highest first'},{value:'amount-asc',label:'💰 Lowest first'},
-    {value:'alpha-asc',label:'🔤 A → Z'},{value:'alpha-desc',label:'🔤 Z → A'}
-  ],()=>filterRm(),'date-desc'));
 }
-function clearRmFilters(){
-  const search=document.getElementById('rm-f-search');
-  if(search) search.value='';
-  ['rm-status','rm-committee','rm-receipt','rm-sort'].forEach(id=>{
-    const el=document.getElementById('cd-'+id);
-    if(!el) return;
-    const defaultVal=id==='rm-sort'?'date-desc':'';
-    el._value=defaultVal;
-    const firstOpt=el.querySelector(`.cd-opt[data-val="${defaultVal}"]`)||el.querySelector('.cd-opt');
-    if(firstOpt){
-      el.querySelector('.cd-label').textContent=firstOpt.textContent;
-      el.querySelectorAll('.cd-opt').forEach(o=>o.classList.toggle('selected',o===firstOpt));
-    }
-  });
-  filterRm();
-}
-window.filterRm=filterRm;window.clearRmFilters=clearRmFilters;
-
 function rmCard(r,canAct){
   const u=getUserById(r.requestedBy);
   const ab=r.approvedBy?getUserById(r.approvedBy):null;
@@ -1217,144 +901,37 @@ async function rejectReimbursement(id){
   toast('Reimbursement rejected','error');
 }
 
-// ── COMMITTEES — overview + detail view ──
-function renderCommittees(focusId=null){
+// ── COMMITTEES ──
+function renderCommittees(){
   const isAdmin=can('view_all');
   document.getElementById('top-actions').innerHTML='';
   const committees=Object.values(DATA.committees).filter(c=>isAdmin||c.id===currentUser.committee);
-
-  // If a committee is focused, show its detail page
-  if(focusId){
-    const c=DATA.committees[focusId];
-    if(!c){renderCommittees();return;}
-    const members=DATA.users.filter(u=>u.committee===c.id&&u.role==='member');
-    const supervisors=DATA.users.filter(u=>u.role==='supervisor');
-    const txs=DATA.transactions.filter(t=>t.committee===c.id).sort((a,b)=>b.date.localeCompare(a.date));
-    const rms=DATA.reimbursements.filter(r=>r.committee===c.id).sort((a,b)=>b.date.localeCompare(a.date));
-    const pct=c.allocated>0?Math.round((c.balance/c.allocated)*100):0;
-    const totalIncome=txs.filter(t=>t.type==='revenue'&&t.status==='approved').reduce((s,t)=>s+t.amount,0);
-    const totalExpense=txs.filter(t=>t.type==='expense'&&t.status==='approved').reduce((s,t)=>s+t.amount,0);
-    const avatarColors=['#c9a84c','#4f9cf9','#3ecf8e','#f5a623','#e05252','#a78bfa','#f472b6','#2dd4bf'];
-
-    document.getElementById('top-title').textContent=`${c.icon} ${c.name} Committee`;
-    document.getElementById('top-sub').textContent='Committee detail view';
-    document.getElementById('top-actions').innerHTML=`<button class="btn btn-ghost btn-sm" onclick="renderCommittees()">← All Committees</button>`;
-
-    document.getElementById('page-content').innerHTML=`
-    <!-- Stats row -->
-    <div class="stats-grid" style="margin-bottom:20px">
-      <div class="stat-card gold"><div class="stat-icon">💰</div><div class="stat-label">Allocated</div><div class="stat-value gold mono">${money(c.allocated)}</div></div>
-      <div class="stat-card green"><div class="stat-icon">🏦</div><div class="stat-label">Balance</div><div class="stat-value green mono">${money(c.balance)}</div></div>
-      <div class="stat-card blue"><div class="stat-icon">📥</div><div class="stat-label">Total Income</div><div class="stat-value blue mono">${money(totalIncome)}</div></div>
-      <div class="stat-card red"><div class="stat-icon">📤</div><div class="stat-label">Total Expenses</div><div class="stat-value red mono">${money(totalExpense)}</div></div>
-    </div>
-
-    <!-- Budget bar -->
-    <div class="card" style="margin-bottom:16px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <span style="font-weight:700">Budget Usage</span>
-        <span class="mono" style="font-size:13px">${money(c.balance)} remaining · ${100-pct}% spent</span>
-      </div>
-      <div class="prog-bar" style="height:10px"><div class="prog-fill ${c.color}" style="width:${pct}%"></div></div>
-    </div>
-
-    <div class="grid-2" style="margin-bottom:16px">
-      <!-- Members -->
-      <div class="card">
-        <div class="card-title"><span>👤</span> Members <span style="font-size:12px;color:var(--muted);font-weight:400">(${members.length})</span></div>
-        ${members.length?members.map((m,i)=>{
-          const bg=avatarColors[i%avatarColors.length];
-          return`<div class="member-row" style="margin-bottom:8px">
-            <div class="member-avatar" style="background:${bg}22;color:${bg}">${m.name.charAt(0)}</div>
-            <div class="member-info">
-              <div class="member-name">${m.name}</div>
-              <div class="member-username" style="font-size:11px;color:var(--muted)">${m.email||''}</div>
-            </div>
-            <span class="sidebar-badge badge-member">👤 Member</span>
-          </div>`;
-        }).join(''):`<div class="empty" style="padding:24px"><div class="empty-icon">👤</div><div class="empty-text" style="font-size:13px">No members assigned</div></div>`}
-      </div>
-
-      <!-- Supervisors -->
-      <div class="card">
-        <div class="card-title"><span>🔍</span> Supervisors <span style="font-size:12px;color:var(--muted);font-weight:400">(${supervisors.length})</span></div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Supervisors oversee all committees</div>
-        ${supervisors.length?supervisors.map((m,i)=>{
-          const bg=avatarColors[(i+3)%avatarColors.length];
-          return`<div class="member-row" style="margin-bottom:8px">
-            <div class="member-avatar" style="background:${bg}22;color:${bg}">${m.name.charAt(0)}</div>
-            <div class="member-info">
-              <div class="member-name">${m.name}</div>
-              <div class="member-username" style="font-size:11px;color:var(--muted)">${m.email||''}</div>
-            </div>
-            <span class="sidebar-badge badge-supervisor">🔍 Supervisor</span>
-          </div>`;
-        }).join(''):`<div class="empty" style="padding:24px"><div class="empty-icon">🔍</div><div class="empty-text" style="font-size:13px">No supervisors</div></div>`}
-      </div>
-    </div>
-
-    <!-- Transactions -->
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-title"><span>↔</span> Transaction History <span style="font-size:12px;color:var(--muted);font-weight:400">(${txs.length})</span></div>
-      ${txs.length?`<div class="table-wrap"><table>
-        <thead><tr><th>Description</th><th>Amount</th><th>Type</th><th>Created By</th><th>Date</th><th>Status</th></tr></thead>
-        <tbody>${txs.map(t=>{
-          const creator=getUserById(t.createdBy);
-          const approver=t.approvedBy?getUserById(t.approvedBy):null;
-          return`<tr>
-            <td style="font-weight:600">${t.desc}${approver?`<div style="font-size:10px;color:var(--muted);margin-top:2px">${t.status==='approved'?'✓':'✗'} by ${approver.name||'?'} · ${formatDate(t.approvedDate)}</div>`:''}</td>
-            <td class="mono" style="color:${t.type==='expense'?'var(--red)':'var(--green)'};font-weight:700">${t.type==='expense'?'-':'+'} ${money(t.amount)}</td>
-            <td><span class="tag tag-${t.type}">${t.type}</span></td>
-            <td><div style="font-size:13px;font-weight:500">${creator?.name||'?'}</div><div style="font-size:10px;color:var(--muted)">${creator?.email||''}</div></td>
-            <td style="color:var(--muted);font-size:12px">${formatDate(t.date)}</td>
-            <td><span class="status status-${t.status}">${t.status}</span></td>
-          </tr>`;
-        }).join('')}</tbody>
-      </table></div>`:`<div class="empty" style="padding:24px"><div class="empty-icon">📭</div><div class="empty-text" style="font-size:13px">No transactions yet</div></div>`}
-    </div>
-
-    <!-- Reimbursements -->
-    <div class="card">
-      <div class="card-title"><span>⟳</span> Reimbursements <span style="font-size:12px;color:var(--muted);font-weight:400">(${rms.length})</span></div>
-      ${rms.length?rms.map(r=>{
-        const u=getUserById(r.requestedBy);
-        return`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04)">
-          <div>
-            <div style="font-weight:600;font-size:13px">${r.reason}</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">${u?.name||'?'} · ${formatDate(r.date)} ${r.receipts?.length?`· 🧾 ${r.receipts.length} receipt`:'· 🚫 No receipt'}</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px">
-            <span class="mono" style="font-weight:700;color:var(--gold)">${money(r.amount)}</span>
-            <span class="status status-${r.status}">${r.status}</span>
-          </div>
-        </div>`;
-      }).join(''):`<div class="empty" style="padding:24px"><div class="empty-icon">🧾</div><div class="empty-text" style="font-size:13px">No reimbursements</div></div>`}
-    </div>`;
-    return;
-  }
-
-  // Overview — clickable cards
   document.getElementById('page-content').innerHTML=`
-  <div class="grid-2">
+  <div class="grid-2" style="margin-bottom:24px">
     ${committees.map(c=>{
-      const members=DATA.users.filter(u=>u.committee===c.id&&u.role==='member');
-      const recentTx=DATA.transactions.filter(t=>t.committee===c.id).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,3);
-      const pct=c.allocated>0?Math.round((c.balance/c.allocated)*100):0;
-      return`<div class="committee-card" onclick="renderCommittees('${c.id}')" style="cursor:pointer">
+      const members=DATA.users.filter(u=>u.committee===c.id);
+      const recentTx=DATA.transactions.filter(t=>t.committee===c.id).slice(-3).reverse();
+      const pct=Math.round((c.balance/c.allocated)*100);
+      return`<div class="committee-card">
         <div class="committee-header">
           <div class="committee-avatar" style="background:${avatarBg(c.color)}">${c.icon}</div>
-          <div style="flex:1">
+          <div>
             <div class="committee-name">${c.name} Committee</div>
             <div class="committee-type">${members.length} member${members.length!==1?'s':''}</div>
           </div>
-          <span style="font-size:11px;color:var(--muted);font-weight:500">View → </span>
         </div>
         <div class="committee-stats" style="margin-bottom:16px">
-          <div class="cstat"><div class="cstat-label">Allocated</div><div class="cstat-value">${money(c.allocated)}</div></div>
-          <div class="cstat"><div class="cstat-label">Balance</div><div class="cstat-value" style="color:${pct<30?'var(--red)':pct<60?'var(--orange)':'var(--green)'}">${money(c.balance)}</div></div>
+          <div class="cstat">
+            <div class="cstat-label">Allocated</div>
+            <div class="cstat-value">${money(c.allocated)}</div>
+          </div>
+          <div class="cstat">
+            <div class="cstat-label">Balance</div>
+            <div class="cstat-value" style="color:${pct<30?'var(--red)':pct<60?'var(--orange)':'var(--green)'}">${money(c.balance)}</div>
+          </div>
         </div>
         <div style="margin-bottom:14px">
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px"><span>Budget usage</span><span>${100-pct}% remaining</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px"><span>Budget usage</span><span>${100-pct}% spent</span></div>
           <div class="prog-bar"><div class="prog-fill ${c.color}" style="width:${pct}%"></div></div>
         </div>
         <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:8px">Recent Activity</div>
@@ -1366,7 +943,6 @@ function renderCommittees(focusId=null){
     }).join('')}
   </div>`;
 }
-window.renderCommittees=renderCommittees;
 
 // ── TRANSPARENCY ──
 function renderTransparency(){
@@ -1448,7 +1024,7 @@ function renderMembers(){
           <span class="member-name">${m.name}</span>
           <span class="sidebar-badge ${badgeCls.trim()}" style="font-size:10px">${badgeTxt.trim()}</span>
         </div>
-        <div class="member-username">${m.email||('@'+(m.username||''))}${m.role==='member'?' · '+(c?c.icon+' '+c.name:'No committee'):' · All committees'}</div>
+        <div class="member-username">@${m.username}${m.role==='member'?' · '+(c?c.icon+' '+c.name:'No committee'):' · All committees'}</div>
       </div>
       <div class="member-actions">
         ${m.role==='member'?`<button class="btn btn-ghost btn-sm" onclick="openTransferMember('${m.id}')">Transfer</button>`:''}
@@ -1501,10 +1077,10 @@ function openAddMember(){
   <div class="form-grid">
     <div class="form-row">
       <div class="form-group"><label>Full Name</label><input id="nm-name" placeholder="e.g. Sam Lee"/></div>
-      <div class="form-group"><label>School Email</label><input type="email" id="nm-email" placeholder="sam.lee@icsabidjan.org"/></div>
+      <div class="form-group"><label>Username</label><input id="nm-user" placeholder="e.g. sam.lee"/></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>Temporary Password</label><input type="password" id="nm-pass" placeholder="Min 6 characters"/></div>
+      <div class="form-group"><label>Password</label><input type="password" id="nm-pass" placeholder="Password"/></div>
       <div class="form-group">
         <label>Role</label>
         <select id="nm-role" onchange="toggleCommitteeField(this.value)">
@@ -1521,10 +1097,7 @@ function openAddMember(){
       <p style="font-size:11px;color:var(--muted);margin-top:4px">Members are assigned to one committee only</p>
     </div>
     <div id="nm-supervisor-note" style="display:none;background:rgba(79,156,249,.08);border:1px solid rgba(79,156,249,.2);border-radius:8px;padding:12px;font-size:12px;color:var(--blue)">
-      🔍 Supervisors can view all committees, verify purchases, and approve or reject requests.
-    </div>
-    <div style="background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);border-radius:8px;padding:12px;font-size:12px;color:var(--gold)">
-      ⚠️ The email must end in @icsabidjan.org. A Firebase Auth account will be created automatically. The user can reset their password anytime from the login page.
+      🔍 Supervisors can view all committees, verify purchases, and approve or reject requests. They are not assigned to a specific committee.
     </div>
   </div>
   <p id="nm-err" style="color:var(--red);font-size:12px;margin-top:8px;display:none"></p>
@@ -1541,37 +1114,17 @@ function toggleCommitteeField(role){
 }
 async function doAddMember(){
   const name=document.getElementById('nm-name').value.trim();
-  const email=document.getElementById('nm-email').value.trim().toLowerCase();
+  const user=document.getElementById('nm-user').value.trim();
   const pass=document.getElementById('nm-pass').value;
   const role=document.getElementById('nm-role').value;
   const committee=role==='member'?(document.getElementById('nm-committee')?.value||null):null;
   const err=document.getElementById('nm-err');
-  err.style.display='none';
-  if(!name||!email||!pass){err.textContent='All fields required.';err.style.display='block';return}
-  if(!email.endsWith('@icsabidjan.org')){err.textContent='Email must end in @icsabidjan.org';err.style.display='block';return}
-  if(pass.length<6){err.textContent='Password must be at least 6 characters.';err.style.display='block';return}
-  if(DATA.users.find(u=>u.email===email)){err.textContent='An account with this email already exists.';err.style.display='block';return}
-  try{
-    // Create Firebase Auth account
-    const {createUserWithEmailAndPassword} = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
-    const cred=await createUserWithEmailAndPassword(auth,email,pass);
-    const newId=cred.user.uid;
-    await dbSet('users',newId,{id:newId,email,name,role,committee,password:pass});
-    // Sign back in as current treasurer (creating a user signs you in as them)
-    await signInWithEmailAndPassword(auth,currentUser.email,currentUser.password||'');
-    closeModal();
-    toast(`${role==='supervisor'?'Supervisor':'Member'} "${name}" added`,'success');
-  } catch(e){
-    if(e.code==='auth/email-already-in-use'){
-      // Auth account exists, just save to Firestore
-      const newId=genId();
-      await dbSet('users',newId,{id:newId,email,name,role,committee,password:pass});
-      closeModal();
-      toast(`${role==='supervisor'?'Supervisor':'Member'} "${name}" added`,'success');
-    } else {
-      err.textContent='Error: '+e.message;err.style.display='block';
-    }
-  }
+  if(!name||!user||!pass){err.textContent='All fields required.';err.style.display='block';return}
+  if(DATA.users.find(u=>u.username===user)){err.textContent='Username already taken.';err.style.display='block';return}
+  const newId=genId();
+  await dbSet('users',newId,{id:newId,username:user,password:pass,name,role,committee});
+  closeModal();
+  toast(`${role==='supervisor'?'Supervisor':'Member'} "${name}" added`,'success');
 }
 
 // ── ACCOUNT ──
@@ -1617,29 +1170,13 @@ async function changePassword(){
   const nw=document.getElementById('pw-new').value;
   const conf=document.getElementById('pw-confirm').value;
   const err=document.getElementById('pw-err');
-  err.style.display='none';
-  if(!old){err.textContent='Current password is required.';err.style.display='block';return}
-  if(!nw||nw.length<6){err.textContent='New password must be at least 6 characters.';err.style.display='block';return}
+  if(old!==currentUser.password){err.textContent='Current password is incorrect.';err.style.display='block';return}
+  if(!nw||nw.length<4){err.textContent='New password must be at least 4 characters.';err.style.display='block';return}
   if(nw!==conf){err.textContent='Passwords do not match.';err.style.display='block';return}
-  try{
-    // Reauthenticate first for security
-    const credential=EmailAuthProvider.credential(auth.currentUser.email,old);
-    await reauthenticateWithCredential(auth.currentUser,credential);
-    await updatePassword(auth.currentUser,nw);
-    // Also update in Firestore for reference
-    await dbUpdate('users',currentUser.id,{password:nw});
-    toast('Password updated successfully','success');
-    document.getElementById('pw-old').value='';
-    document.getElementById('pw-new').value='';
-    document.getElementById('pw-confirm').value='';
-  } catch(e){
-    if(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential'){
-      err.textContent='Current password is incorrect.';
-    } else {
-      err.textContent='Could not update password: '+e.message;
-    }
-    err.style.display='block';
-  }
+  err.style.display='none';
+  await dbUpdate('users',currentUser.id,{password:nw});
+  toast('Password updated successfully','success');
+  document.getElementById('pw-old').value='';document.getElementById('pw-new').value='';document.getElementById('pw-confirm').value='';
 }
 
 // ═══════════════════════════════════════════════
@@ -2253,9 +1790,7 @@ function zoomImg(src){
 }
 
 // expose functions needed by inline HTML onclick handlers
-window.doLogin=doLogin;window.doLogout=doLogout;
-window.showForgotPassword=showForgotPassword;window.showLoginForm=showLoginForm;
-window.doResetPassword=doResetPassword;
+window.doLogin=doLogin;window.doLogout=doLogout;window.fillDemo=fillDemo;
 window.navigateTo=navigateTo;window.closeModal=closeModal;window.zoomImg=zoomImg;
 window.openNewTransaction=openNewTransaction;window.submitTransaction=submitTransaction;
 window.openNewReimbursement=openNewReimbursement;window.submitReimbursement=submitReimbursement;
