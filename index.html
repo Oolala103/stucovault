@@ -979,10 +979,12 @@ function setupSidebar(){
   <div class="nav-item" onclick="navigateTo('committees')"><span class="nav-icon">◈</span>Committees</div>
   <div class="nav-item" onclick="navigateTo('transparency')"><span class="nav-icon">◎</span>Transparency</div>
   ${can('view_all')?`<div class="nav-item" onclick="navigateTo('cashcounter')"><span class="nav-icon">💵</span>Cash Counter</div>`:''}`;
-  if(can('manage_members')){
+  if(can('view_all')){
     nav+=`<div class="nav-section">Management</div>
-    <div class="nav-item" onclick="navigateTo('members')"><span class="nav-icon">◻</span>Members</div>
-    <div class="nav-item" onclick="navigateTo('manage_committees')"><span class="nav-icon">⬡</span>Committees</div>`;
+    <div class="nav-item" onclick="navigateTo('members')"><span class="nav-icon">◻</span>Members</div>`;
+  }
+  if(can('manage_members')){
+    nav+=`<div class="nav-item" onclick="navigateTo('manage_committees')"><span class="nav-icon">⬡</span>Committees</div>`;
   }
   nav+=`<div class="nav-section">Account</div>
   <div class="nav-item" onclick="navigateTo('account')"><span class="nav-icon">◉</span>My Account</div>`;
@@ -1630,54 +1632,247 @@ function renderTransparency(){
 }
 
 // ── MEMBERS ──
-function renderMembers(){
-  document.getElementById('top-actions').innerHTML=`<button class="btn btn-gold btn-sm" onclick="openAddMember()">+ Add User</button>`;
-  const managed=DATA.users.filter(u=>u.role!=='treasurer');
-  const supervisors=managed.filter(u=>u.role==='supervisor');
-  const members=managed.filter(u=>u.role==='member');
-  const roleColors={'supervisor':'#4f9cf9','member':'#3ecf8e'};
+function getFilteredMembers(){
+  const search=(document.getElementById('mb-f-search')?.value||'').toLowerCase();
+  const role=cdVal('mb-role')||'';
+  const committee=cdVal('mb-committee')||'';
+  const sort=cdVal('mb-sort')||'alpha-asc';
+  let users=DATA.users.filter(u=>u.role!=='treasurer');
+  if(role) users=users.filter(u=>u.role===role);
+  if(committee) users=users.filter(u=>u.committee===committee);
+  if(search) users=users.filter(u=>
+    u.name.toLowerCase().includes(search)||
+    (u.email||'').toLowerCase().includes(search)
+  );
+  users.sort((a,b)=>{
+    switch(sort){
+      case 'alpha-asc': return a.name.localeCompare(b.name);
+      case 'alpha-desc': return b.name.localeCompare(a.name);
+      case 'role': return a.role.localeCompare(b.role);
+      case 'committee': return (a.committee||'zzz').localeCompare(b.committee||'zzz');
+      default: return a.name.localeCompare(b.name);
+    }
+  });
+  return users;
+}
+
+function filterMembers(){
+  const users=getFilteredMembers();
+  const wrap=document.getElementById('mb-list-wrap');
+  const count=document.getElementById('mb-count');
+  if(!wrap) return;
+  if(count) count.textContent=`${users.length} user${users.length!==1?'s':''} shown`;
+  wrap.innerHTML=users.length
+    ?users.map(m=>memberRowHtml(m)).join('')
+    :`<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">No users match your filters</div></div>`;
+}
+
+function memberRowHtml(m){
+  const c=m.committee?DATA.committees[m.committee]:null;
+  const avatarColors=['#c9a84c','#4f9cf9','#3ecf8e','#f5a623','#e05252','#a78bfa','#f472b6','#2dd4bf'];
+  const bg=avatarColors[DATA.users.indexOf(m)%avatarColors.length];
   const roleBadge={'supervisor':'badge-supervisor 🔍 Supervisor','member':'badge-member 👤 Member'};
-  const userRowHtml=(m)=>{
-    const c=m.committee?DATA.committees[m.committee]:null;
-    const avatarColors=['#c9a84c','#4f9cf9','#3ecf8e','#f5a623','#e05252','#a78bfa','#f472b6','#2dd4bf'];
-    const bg=avatarColors[DATA.users.indexOf(m)%avatarColors.length];
-    const [badgeCls,badgeTxt]=(roleBadge[m.role]||'badge-member 👤 Member').split(' ').reduce((a,v,i)=>i===0?[v,a[1]]:[a[0],a[1]+' '+v],['','']);
-    return`<div class="member-row" id="mr-${m.id}">
-      <div class="member-avatar" style="background:${bg}22;color:${bg}">${m.name.charAt(0)}</div>
-      <div class="member-info">
-        <div style="display:flex;align-items:center;gap:8px">
-          <span class="member-name">${m.name}</span>
-          <span class="sidebar-badge ${badgeCls.trim()}" style="font-size:10px">${badgeTxt.trim()}</span>
-        </div>
-        <div class="member-username">${m.email||('@'+(m.username||''))}${m.role==='member'?' · '+(c?c.icon+' '+c.name:'No committee'):' · All committees'}</div>
+  const [badgeCls,badgeTxt]=(roleBadge[m.role]||'badge-member 👤 Member').split(' ').reduce((a,v,i)=>i===0?[v,a[1]]:[a[0],a[1]+' '+v],['','']);
+  const canEdit=can('manage_members')||can('approve_transaction'); // treasurer + supervisor
+  return`<div class="member-row" id="mr-${m.id}">
+    <div class="member-avatar" style="background:${bg}22;color:${bg}">${m.name.charAt(0)}</div>
+    <div class="member-info">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="member-name">${m.name}</span>
+        <span class="sidebar-badge ${badgeCls.trim()}" style="font-size:10px">${badgeTxt.trim()}</span>
       </div>
-      <div class="member-actions">
-        ${m.role==='member'?`<button class="btn btn-ghost btn-sm" onclick="openTransferMember('${m.id}')">Transfer</button>`:''}
-        <button class="btn btn-red btn-sm" onclick="removeMember('${m.id}')">Remove</button>
-      </div>
-    </div>`;
-  };
-  document.getElementById('page-content').innerHTML=`
-  ${supervisors.length?`<div class="card" style="margin-bottom:16px">
-    <div class="card-title"><span>🔍</span> Supervisors</div>
-    <div id="supervisor-list">${supervisors.map(userRowHtml).join('')}</div>
-  </div>`:''}
-  <div class="card">
-    <div class="card-title"><span>👤</span> Members</div>
-    <div id="member-list">
-    ${members.length?members.map(userRowHtml).join(''):`<div class="empty"><div class="empty-icon">👤</div><div class="empty-text">No members yet</div><div class="empty-sub">Add members using the button above</div></div>`}
+      <div class="member-username">${m.email||('@'+(m.username||''))}${m.role==='member'?' · '+(c?c.icon+' '+c.name:'No committee'):' · All committees'}</div>
+    </div>
+    <div class="member-actions">
+      ${canEdit?`<button class="btn btn-ghost btn-sm" onclick="openEditMember('${m.id}')">✎ Edit</button>`:''}
+      ${m.role==='member'&&can('manage_members')?`<button class="btn btn-ghost btn-sm" onclick="openTransferMember('${m.id}')">⇄ Transfer</button>`:''}
+      ${can('manage_members')?`<button class="btn btn-red btn-sm" onclick="removeMember('${m.id}')">🗑</button>`:''}
     </div>
   </div>`;
 }
-async function removeMember(id){
-  if(!confirm('Remove this user from the system?'))return;
-  await dbDelete('users',id);
-  toast('User removed','error');
+
+function renderMembers(){
+  const canAdd=can('manage_members');
+  document.getElementById('top-actions').innerHTML=canAdd?`<button class="btn btn-gold btn-sm" onclick="openAddMember()">+ Add User</button>`:'';
+  const users=getFilteredMembers();
+
+  document.getElementById('page-content').innerHTML=`
+  <div class="card">
+    <!-- Filter bar -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px">
+      <input id="mb-f-search" placeholder="🔍 Search name or email…" oninput="filterMembers()"
+        style="padding:7px 12px;background:var(--navy2);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:var(--white);font-size:12px;font-family:'Syne',sans-serif;flex:1;min-width:180px;outline:none"/>
+      <span id="cd-mb-role-wrap"></span>
+      <span id="cd-mb-committee-wrap"></span>
+      <span id="cd-mb-sort-wrap"></span>
+      <button onclick="clearMemberFilters()" class="btn btn-ghost btn-sm">↺ Reset</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px" id="mb-count">${users.length} user${users.length!==1?'s':''} shown</div>
+    <div id="mb-list-wrap">
+      ${users.length?users.map(m=>memberRowHtml(m)).join(''):`<div class="empty"><div class="empty-icon">👤</div><div class="empty-text">No users yet</div></div>`}
+    </div>
+  </div>`;
+
+  // Build custom dropdowns
+  document.getElementById('cd-mb-role-wrap')?.replaceWith(cdCreate('mb-role',[
+    {value:'',label:'All Roles'},
+    {value:'member',label:'👤 Members'},
+    {value:'supervisor',label:'🔍 Supervisors'}
+  ],()=>filterMembers(),''));
+
+  document.getElementById('cd-mb-committee-wrap')?.replaceWith(cdCreate('mb-committee',[
+    {value:'',label:'All Committees'},
+    {value:'none',label:'No Committee'},
+    ...Object.values(DATA.committees).map(c=>({value:c.id,label:c.icon+' '+c.name}))
+  ],()=>filterMembersCommittee(),''));
+
+  document.getElementById('cd-mb-sort-wrap')?.replaceWith(cdCreate('mb-sort',[
+    {value:'alpha-asc',label:'🔤 Name A → Z'},
+    {value:'alpha-desc',label:'🔤 Name Z → A'},
+    {value:'role',label:'👥 Group by Role'},
+    {value:'committee',label:'◈ Group by Committee'},
+  ],()=>filterMembers(),'alpha-asc'));
 }
+
+function filterMembersCommittee(){
+  // handle 'none' value for no committee
+  filterMembers();
+}
+
+function clearMemberFilters(){
+  const s=document.getElementById('mb-f-search');
+  if(s) s.value='';
+  ['mb-role','mb-committee','mb-sort'].forEach(id=>{
+    const el=document.getElementById('cd-'+id);
+    if(!el) return;
+    const defaultVal=id==='mb-sort'?'alpha-asc':'';
+    el._value=defaultVal;
+    const opt=el.querySelector(`.cd-opt[data-val="${defaultVal}"]`)||el.querySelector('.cd-opt');
+    if(opt){
+      el.querySelector('.cd-label').textContent=opt.textContent;
+      el.querySelectorAll('.cd-opt').forEach(o=>o.classList.toggle('selected',o===opt));
+    }
+  });
+  filterMembers();
+}
+window.filterMembers=filterMembers;window.clearMemberFilters=clearMemberFilters;
+
+// ── Edit Member ──
+function openEditMember(id){
+  const m=DATA.users.find(u=>u.id===id);
+  if(!m) return;
+  const committeeOpts=Object.values(DATA.committees).map(c=>
+    `<option value="${c.id}" ${c.id===m.committee?'selected':''}>${c.icon} ${c.name}</option>`
+  ).join('');
+  const isTreasurer=can('manage_members');
+  openModal(`<div class="modal-title">✎ Edit User</div>
+  <div class="modal-sub">Update details for ${m.name}</div>
+  <div class="form-grid">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input id="em-name" value="${m.name}"/>
+        <p class="form-error" id="em-name-err">Name is required</p>
+      </div>
+      <div class="form-group">
+        <label>School Email</label>
+        <input id="em-email" value="${m.email||''}" ${!isTreasurer?'disabled style="opacity:.5"':''}/>
+        <p style="font-size:10px;color:var(--muted);margin-top:3px">Email changes require Firebase Auth update</p>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Role</label>
+        <select id="em-role" onchange="toggleEmCommittee(this.value)" ${!isTreasurer?'disabled style="opacity:.5"':''}>
+          <option value="member" ${m.role==='member'?'selected':''}>👤 Member</option>
+          <option value="supervisor" ${m.role==='supervisor'?'selected':''}>🔍 Supervisor</option>
+        </select>
+      </div>
+      <div class="form-group" id="em-committee-group" ${m.role==='supervisor'?'style="display:none"':''}>
+        <label>Committee</label>
+        <select id="em-committee">
+          <option value="">— No Committee —</option>
+          ${committeeOpts}
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Reset Password (optional)</label>
+      <input type="password" id="em-newpass" placeholder="Leave blank to keep current password"/>
+      <p style="font-size:10px;color:var(--muted);margin-top:3px">Min 6 characters. Only fill this if you want to change their password.</p>
+      <p class="form-error" id="em-pass-err">Password must be at least 6 characters</p>
+    </div>
+  </div>
+  <p id="em-err" style="color:var(--red);font-size:12px;margin-top:8px;display:none"></p>
+  <div class="form-actions" style="margin-top:16px">
+    <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-gold btn-sm" onclick="doEditMember('${m.id}')">Save Changes</button>
+  </div>`,'modal-lg');
+}
+
+function toggleEmCommittee(role){
+  const cg=document.getElementById('em-committee-group');
+  if(cg) cg.style.display=role==='supervisor'?'none':'flex';
+}
+window.toggleEmCommittee=toggleEmCommittee;
+
+async function doEditMember(id){
+  const m=DATA.users.find(u=>u.id===id);
+  if(!m) return;
+  const name=document.getElementById('em-name').value.trim();
+  const email=document.getElementById('em-email').value.trim().toLowerCase();
+  const role=document.getElementById('em-role').value;
+  const committeeEl=document.getElementById('em-committee');
+  const committee=role==='supervisor'?null:(committeeEl?.value||null);
+  const newpass=document.getElementById('em-newpass').value;
+  const err=document.getElementById('em-err');
+  err.style.display='none';
+
+  // Validate
+  if(!name){document.getElementById('em-name-err').style.display='block';return}
+  document.getElementById('em-name-err').style.display='none';
+  if(newpass&&newpass.length<6){document.getElementById('em-pass-err').style.display='block';return}
+  document.getElementById('em-pass-err').style.display='none';
+  if(email&&!email.endsWith('@icsabidjan.org')){err.textContent='Email must end in @icsabidjan.org';err.style.display='block';return}
+
+  try{
+    const updates={name,role,committee};
+    if(email) updates.email=email;
+    if(newpass) updates.password=newpass;
+    await dbUpdate('users',id,updates);
+    closeModal();
+    toast(`${name} updated successfully`,'success');
+  } catch(e){
+    err.textContent='Error saving: '+e.message;
+    err.style.display='block';
+  }
+}
+window.openEditMember=openEditMember;window.doEditMember=doEditMember;
+
+async function removeMember(id){
+  const m=DATA.users.find(u=>u.id===id);
+  if(!m) return;
+  openModal(`<div class="modal-title" style="color:var(--red)">🗑 Remove User</div>
+  <div class="modal-sub">This removes them from Firestore but not Firebase Auth</div>
+  <div style="background:rgba(224,82,82,.08);border:1px solid rgba(224,82,82,.2);border-radius:10px;padding:16px;margin-bottom:20px">
+    <div style="font-weight:800;font-size:15px">${m.name}</div>
+    <div style="font-size:13px;color:var(--muted);margin-top:4px">${m.email||''} · ${m.role}</div>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-red btn-sm" onclick="doRemoveMember('${m.id}')">Remove</button>
+  </div>`);
+}
+async function doRemoveMember(id){
+  await dbDelete('users',id);
+  closeModal();toast('User removed','error');
+}
+window.removeMember=removeMember;window.doRemoveMember=doRemoveMember;
+
 function openTransferMember(id){
   const m=DATA.users.find(u=>u.id===id);
   if(!m)return;
-  openModal(`<div class="modal-title">Transfer Member</div>
+  openModal(`<div class="modal-title">⇄ Transfer Member</div>
   <div class="modal-sub">Move ${m.name} to a different committee</div>
   <div class="form-group">
     <label>New Committee</label>
