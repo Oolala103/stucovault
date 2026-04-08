@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>StucoVault</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛️</text></svg>"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -660,7 +661,12 @@ function txRow(t,canAct){
   return`<tr id="tr-${t.id}">
     <td><div style="font-weight:600">${t.desc}</div>${t.approvedBy?`<div style="font-size:10px;color:var(--muted);margin-top:2px">${t.status==='approved'?'✓':'✗'} by ${ab?.name||'?'} on ${formatDate(t.approvedDate)}</div>`:''}</td>
     <td>${committeeTag(t.committee)}</td>
-    <td class="mono" style="color:${t.type==='expense'?'var(--red)':'var(--green)'};font-weight:700">${t.type==='expense'?'-':'+'} ${money(t.amount)}</td>
+    <td class="mono" style="color:${t.type==='expense'?'var(--red)':'var(--green)'};font-weight:700">${t.type==='expense'?'-':'+'} ${money(t.amount)}
+      ${(t.cashAmount!=null||t.waveAmount!=null)?`<div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">
+        ${t.cashAmount?`<span style="font-size:10px;padding:1px 6px;background:rgba(62,207,142,.15);color:var(--green);border-radius:4px;font-weight:600">💵 ${money(t.cashAmount)}</span>`:''}
+        ${t.waveAmount?`<span style="font-size:10px;padding:1px 6px;background:rgba(79,156,249,.15);color:var(--blue);border-radius:4px;font-weight:600">🐧 ${money(t.waveAmount)}</span>`:''}
+      </div>`:''}
+    </td>
     <td><span class="tag tag-${t.type}">${t.type}</span></td>
     <td><div style="font-size:13px">${u?.name||'?'}</div><div style="font-size:10px;color:var(--muted)">${u?.email||''}</div></td>
     <td style="color:var(--muted);font-size:12px">${formatDate(t.date)}</td>
@@ -978,7 +984,8 @@ function setupSidebar(){
   <div class="nav-item" onclick="navigateTo('reimbursements')"><span class="nav-icon">⟳</span>Reimbursements${can('approve_reimbursement')?`<span class="nav-badge">${DATA.reimbursements.filter(r=>r.status==='pending').length}</span>`:''}</div>
   <div class="nav-item" onclick="navigateTo('committees')"><span class="nav-icon">◈</span>Committees</div>
   <div class="nav-item" onclick="navigateTo('transparency')"><span class="nav-icon">◎</span>Transparency</div>
-  ${can('view_all')?`<div class="nav-item" onclick="navigateTo('cashcounter')"><span class="nav-icon">💵</span>Cash Counter</div>`:''}`;
+  ${can('view_all')?`<div class="nav-item" onclick="navigateTo('cashcounter')"><span class="nav-icon">💵</span>Cash Counter</div>`:''}
+  ${can('view_all')?`<div class="nav-item" onclick="navigateTo('wave')"><span class="nav-icon">🐧</span>Wave</div>`:''}`;
   if(can('view_all')){
     nav+=`<div class="nav-section">Management</div>
     <div class="nav-item" onclick="navigateTo('members')"><span class="nav-icon">◻</span>Members</div>`;
@@ -1005,7 +1012,8 @@ function navigateTo(page){
   const titles={
     dashboard:'Dashboard',transactions:'Transactions',reimbursements:'Reimbursements',
     committees:'Committees',transparency:'Transparency',members:'Member Management',
-    manage_committees:'Committee Management',account:'My Account',cashcounter:'Cash Counter'
+    manage_committees:'Committee Management',account:'My Account',cashcounter:'Cash Counter',
+    wave:'Wave Account'
   };
   const subs={
     dashboard:`Welcome back, ${currentUser.name}`,
@@ -1016,7 +1024,8 @@ function navigateTo(page){
     members:'Manage council members',
     manage_committees:'Add, edit or remove committees',
     account:'Your profile and security settings',
-    cashcounter:'Count and verify physical CFA bills'
+    cashcounter:'Count and verify physical CFA bills',
+    wave:'Track Wave digital payments per committee'
   };
   document.getElementById('top-title').textContent=titles[page];
   document.getElementById('top-sub').textContent=subs[page]||'';
@@ -1030,6 +1039,7 @@ function navigateTo(page){
     manage_committees:renderManageCommittees,
     account:renderAccount,
     cashcounter:renderCashCounter,
+    wave:renderWave,
   };
   (pages[page]||renderDashboard)();
 }
@@ -2052,33 +2062,112 @@ function openNewTransaction(){
   <div class="form-grid">
     <div class="form-group"><label>Description</label><input id="nt-desc" placeholder="What was this transaction for?"/><p class="form-error" id="nt-desc-err">Description is required</p></div>
     <div class="form-row">
-      <div class="form-group"><label>Amount (CFA)</label><input type="number" id="nt-amount" placeholder="0" min="1" step="1"/><p class="form-error" id="nt-amount-err">Valid amount required</p></div>
-      <div class="form-group"><label>Type</label><select id="nt-type"><option value="expense">Expense</option><option value="revenue">Revenue</option></select></div>
+      <div class="form-group"><label>Total Amount (CFA)</label><input type="number" id="nt-amount" placeholder="0" min="1" step="1" oninput="updateSplitTotal()"/><p class="form-error" id="nt-amount-err">Valid amount required</p></div>
+      <div class="form-group"><label>Type</label>
+        <select id="nt-type" style="background:var(--navy2);color:var(--white);padding:10px;border:1px solid rgba(255,255,255,.1);border-radius:8px;font-family:'Syne',sans-serif">
+          <option value="expense">📤 Expense</option>
+          <option value="revenue">📥 Revenue</option>
+        </select>
+      </div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>Committee</label><select id="nt-committee">${committeeOptions}</select></div>
+      <div class="form-group"><label>Committee</label>
+        <select id="nt-committee" style="background:var(--navy2);color:var(--white);padding:10px;border:1px solid rgba(255,255,255,.1);border-radius:8px;font-family:'Syne',sans-serif">${committeeOptions}</select>
+      </div>
       <div class="form-group"><label>Date</label><input type="date" id="nt-date" value="${today()}"/></div>
     </div>
-    ${isAdminLogging?`<div class="form-group"><label>Status</label><select id="nt-status"><option value="approved">Approved (direct log)</option><option value="pending">Pending (submit for review)</option></select></div>`:''}
+
+    <!-- Payment Split -->
+    <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:16px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:12px">💳 Payment Method Split</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>💵 Cash Amount (CFA)</label>
+          <input type="number" id="nt-cash" placeholder="0" min="0" step="1" value="0" oninput="updateSplitWave()"/>
+        </div>
+        <div class="form-group">
+          <label>🐧 Wave Amount (CFA)</label>
+          <input type="number" id="nt-wave" placeholder="0" min="0" step="1" value="0" oninput="updateSplitCash()"/>
+        </div>
+      </div>
+      <div id="split-status" style="font-size:12px;color:var(--muted);margin-top:6px">Enter a total amount above — the split will auto-fill as all cash.</div>
+      <p class="form-error" id="nt-split-err" style="display:none">Cash + Wave must equal the total amount</p>
+    </div>
+
+    ${isAdminLogging?`<div class="form-group"><label>Status</label>
+      <select id="nt-status" style="background:var(--navy2);color:var(--white);padding:10px;border:1px solid rgba(255,255,255,.1);border-radius:8px;font-family:'Syne',sans-serif">
+        <option value="approved">✓ Approved (direct log)</option>
+        <option value="pending">⏳ Pending (submit for review)</option>
+      </select></div>`:''}
   </div>
   <div class="form-actions" style="margin-top:16px">
     <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
     <button class="btn btn-gold btn-sm" onclick="submitTransaction()">Submit</button>
-  </div>`);
+  </div>`,'modal-lg');
 }
+
+// Live split helpers
+function updateSplitTotal(){
+  const total=parseInt(document.getElementById('nt-amount')?.value)||0;
+  const cashEl=document.getElementById('nt-cash');
+  const waveEl=document.getElementById('nt-wave');
+  if(cashEl) cashEl.value=total;
+  if(waveEl) waveEl.value=0;
+  updateSplitStatus();
+}
+function updateSplitWave(){
+  const total=parseInt(document.getElementById('nt-amount')?.value)||0;
+  const cash=parseInt(document.getElementById('nt-cash')?.value)||0;
+  const waveEl=document.getElementById('nt-wave');
+  if(waveEl) waveEl.value=Math.max(0,total-cash);
+  updateSplitStatus();
+}
+function updateSplitCash(){
+  const total=parseInt(document.getElementById('nt-amount')?.value)||0;
+  const wave=parseInt(document.getElementById('nt-wave')?.value)||0;
+  const cashEl=document.getElementById('nt-cash');
+  if(cashEl) cashEl.value=Math.max(0,total-wave);
+  updateSplitStatus();
+}
+function updateSplitStatus(){
+  const total=parseInt(document.getElementById('nt-amount')?.value)||0;
+  const cash=parseInt(document.getElementById('nt-cash')?.value)||0;
+  const wave=parseInt(document.getElementById('nt-wave')?.value)||0;
+  const statusEl=document.getElementById('split-status');
+  const errEl=document.getElementById('nt-split-err');
+  if(!statusEl) return;
+  const sum=cash+wave;
+  const ok=sum===total;
+  if(total===0){statusEl.textContent='Enter a total amount above.';statusEl.style.color='var(--muted)';}
+  else if(ok){
+    statusEl.innerHTML=`✓ Split confirmed: <strong style="color:var(--green)">${money(cash)} cash</strong> + <strong style="color:var(--blue)">${money(wave)} Wave</strong> = ${money(total)}`;
+    statusEl.style.color='var(--green)';
+    if(errEl) errEl.style.display='none';
+  } else {
+    statusEl.innerHTML=`⚠️ ${money(cash)} + ${money(wave)} = ${money(sum)} — doesn't match ${money(total)}`;
+    statusEl.style.color='var(--orange)';
+  }
+}
+window.updateSplitTotal=updateSplitTotal;
+window.updateSplitWave=updateSplitWave;
+window.updateSplitCash=updateSplitCash;
+
 async function submitTransaction(){
   const desc=document.getElementById('nt-desc').value.trim();
   const amount=parseInt(document.getElementById('nt-amount').value);
   const type=document.getElementById('nt-type').value;
   const committee=document.getElementById('nt-committee').value;
   const date=document.getElementById('nt-date').value;
+  const cashAmount=parseInt(document.getElementById('nt-cash')?.value)||0;
+  const waveAmount=parseInt(document.getElementById('nt-wave')?.value)||0;
   const statusEl=document.getElementById('nt-status');
   const status=statusEl?statusEl.value:'pending';
   let ok=true;
-  const de=document.getElementById('nt-desc-err'),ae=document.getElementById('nt-amount-err');
-  de.style.display='none';ae.style.display='none';
+  const de=document.getElementById('nt-desc-err'),ae=document.getElementById('nt-amount-err'),se=document.getElementById('nt-split-err');
+  de.style.display='none';ae.style.display='none';if(se)se.style.display='none';
   if(!desc){de.style.display='block';ok=false}
   if(!amount||amount<=0){ae.style.display='block';ok=false}
+  if((cashAmount+waveAmount)!==amount){if(se)se.style.display='block';ok=false}
   if(!ok)return;
   if(DATA.transactions.find(t=>t.desc===desc&&t.amount===amount&&t.committee===committee&&t.date===date)){
     toast('Duplicate transaction detected','error');return;
@@ -2090,7 +2179,8 @@ async function submitTransaction(){
     const newBal=type==='expense'?c.balance-amount:c.balance+amount;
     await dbUpdate('committees',committee,{balance:newBal});
   }
-  const newTx={desc,amount,committee,date,type,createdBy:currentUser.id,
+  const newTx={desc,amount,cashAmount,waveAmount,committee,date,type,
+    createdBy:currentUser.id,
     status:isDirectLog?'approved':'pending',
     approvedBy:isDirectLog?currentUser.id:null,
     approvedDate:isDirectLog?today():null};
@@ -2439,33 +2529,45 @@ function renderCashCounter(){
   document.getElementById('top-actions').innerHTML=`<button class="btn btn-gold btn-sm" onclick="saveCashCounter()">💾 Save Count</button>`;
   const cc=DATA.cashCounter||{bills:{},verifiedBills:{},lastSaved:null,savedBy:null};
   const totalAllBalances=Object.values(DATA.committees).reduce((s,c)=>s+c.balance,0);
+  const approvedTx=DATA.transactions.filter(t=>t.status==='approved');
+  const totalWaveNet=approvedTx.reduce((s,t)=>{const w=t.waveAmount||0;return t.type==='revenue'?s+w:s-w;},0);
   const countedTotal=CFA_BILLS.reduce((s,d)=>{
     const qty=parseInt(cc.bills?.[d]||0);
     return s+(qty*d);
   },0);
-  const diff=countedTotal-totalAllBalances;
+  const expectedCash=totalAllBalances-totalWaveNet;
+  const diff=countedTotal-expectedCash;
   const match=diff===0;
   const saver=cc.savedBy?DATA.users.find(u=>u.id===cc.savedBy):null;
 
   document.getElementById('page-content').innerHTML=`
+  <!-- Wave info banner -->
+  <div style="background:rgba(79,156,249,.08);border:1px solid rgba(79,156,249,.2);border-radius:10px;padding:14px 16px;margin-bottom:16px;font-size:12px;display:flex;align-items:center;gap:10px">
+    <span style="font-size:18px">🐧</span>
+    <div>
+      <strong style="color:var(--blue)">Wave Balance: ${money(totalWaveNet)}</strong> is held digitally and not counted here.
+      Physical cash expected = System balance (${money(totalAllBalances)}) − Wave (${money(totalWaveNet)}) = <strong style="color:var(--green)">${money(expectedCash)}</strong>
+      <span style="margin-left:8px"><a href="#" onclick="navigateTo('wave');return false;" style="color:var(--blue);text-decoration:underline;font-size:11px">View Wave Dashboard →</a></span>
+    </div>
+  </div>
   <div class="stats-grid" style="margin-bottom:24px">
     <div class="stat-card gold">
       <div class="stat-icon">💵</div>
-      <div class="stat-label">Counted Total</div>
+      <div class="stat-label">Counted Cash</div>
       <div class="stat-value gold mono" id="cc-counted-total">${money(countedTotal)}</div>
       <div class="stat-sub">from physical bill count</div>
     </div>
-    <div class="stat-card blue">
-      <div class="stat-icon">🏦</div>
-      <div class="stat-label">System Balance</div>
-      <div class="stat-value blue mono">${money(totalAllBalances)}</div>
-      <div class="stat-sub">total across all committees</div>
+    <div class="stat-card green">
+      <div class="stat-icon">💵</div>
+      <div class="stat-label">Expected Cash</div>
+      <div class="stat-value green mono">${money(expectedCash)}</div>
+      <div class="stat-sub">system balance minus Wave</div>
     </div>
     <div class="stat-card ${match?'green':'red'}">
       <div class="stat-icon">${match?'✅':'⚠️'}</div>
       <div class="stat-label">Difference</div>
       <div class="stat-value ${match?'green':'red'} mono" id="cc-diff">${diff===0?'Balanced':money(Math.abs(diff))}</div>
-      <div class="stat-sub">${match?'Cash matches system':'${diff>0?"Surplus":"Shortfall"} detected'}</div>
+      <div class="stat-sub">${match?'Cash matches expected':'Discrepancy detected'}</div>
     </div>
     <div class="stat-card ${match?'green':'red'}">
       <div class="stat-icon">${match?'🟢':'🔴'}</div>
@@ -2476,7 +2578,7 @@ function renderCashCounter(){
   </div>
 
   ${!match&&countedTotal>0?`<div class="alert alert-warn" style="margin-bottom:16px">
-    ⚑ <strong>Mismatch detected!</strong> The physical cash count (${money(countedTotal)}) does not match the system balance (${money(totalAllBalances)}). 
+    ⚑ <strong>Cash mismatch!</strong> Counted ${money(countedTotal)} but expected ${money(expectedCash)} in physical cash.
     Difference: <strong>${diff>0?'+':''}${money(diff)}</strong>. Please recount and verify.
   </div>`:''}
 
@@ -2544,20 +2646,30 @@ function renderCashCounter(){
   </div>
 
   <div class="card" style="margin-top:16px">
-    <div class="card-title"><span>📋</span> Committee Balances for Reference</div>
+    <div class="card-title"><span>📋</span> Committee Balances — Cash vs Wave</div>
     ${Object.values(DATA.committees).map(c=>{
-      const pct=c.allocated>0?Math.round((c.balance/c.allocated)*100):0;
-      return`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+      const txs=DATA.transactions.filter(t=>t.committee===c.id&&t.status==='approved');
+      const waveNet=txs.reduce((s,t)=>{const w=t.waveAmount||0;return t.type==='revenue'?s+w:s-w;},0);
+      const cashNet=c.balance-waveNet;
+      return`<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.05)">
         <div style="display:flex;align-items:center;gap:10px">
           <span style="font-size:18px">${c.icon}</span>
           <span style="font-weight:700">${c.name}</span>
         </div>
-        <span class="mono" style="font-size:14px;font-weight:700">${money(c.balance)}</span>
+        <div style="display:flex;gap:16px;align-items:center">
+          <span style="font-size:11px;color:var(--green)">💵 ${money(cashNet)}</span>
+          <span style="font-size:11px;color:var(--blue)">🐧 ${money(waveNet)}</span>
+          <span class="mono" style="font-size:14px;font-weight:700;color:var(--gold)">${money(c.balance)}</span>
+        </div>
       </div>`;
     }).join('')}
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;margin-top:4px">
-      <span style="font-weight:800;font-size:15px">Total System Balance</span>
-      <span class="mono" style="font-size:15px;font-weight:800;color:var(--gold)">${money(totalAllBalances)}</span>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 0;margin-top:4px">
+      <span style="font-weight:800;font-size:15px">Total</span>
+      <div style="display:flex;gap:16px;align-items:center">
+        <span style="font-size:12px;color:var(--green)">💵 ${money(expectedCash)}</span>
+        <span style="font-size:12px;color:var(--blue)">🐧 ${money(totalWaveNet)}</span>
+        <span class="mono" style="font-size:15px;font-weight:800;color:var(--gold)">${money(totalAllBalances)}</span>
+      </div>
     </div>
   </div>`;
 }
@@ -2576,7 +2688,10 @@ function updateBillRow(denom, val){
     return s+(q*d);
   },0);
   const totalAllBalances=Object.values(DATA.committees).reduce((s,c)=>s+c.balance,0);
-  const diff=grandTotal-totalAllBalances;
+  const approvedTxLive=DATA.transactions.filter(t=>t.status==='approved');
+  const totalWaveLive=approvedTxLive.reduce((s,t)=>{const w=t.waveAmount||0;return t.type==='revenue'?s+w:s-w;},0);
+  const expectedCashLive=totalAllBalances-totalWaveLive;
+  const diff=grandTotal-expectedCashLive;
   const match=diff===0;
   const gtEl=document.getElementById('cc-grand-total');
   const ctEl=document.getElementById('cc-counted-total');
@@ -2648,8 +2763,151 @@ function zoomImg(src){
   document.getElementById('img-zoom').classList.add('open');
 }
 
-// expose functions needed by inline HTML onclick handlers
-window.doLogin=doLogin;window.doLogout=doLogout;
+// ═══════════════════════════════════════════════
+//  WAVE DASHBOARD
+// ═══════════════════════════════════════════════
+function renderWave(){
+  if(!can('view_all')){toast('Access denied','error');navigateTo('dashboard');return}
+  document.getElementById('top-actions').innerHTML='';
+
+  const approvedTx=DATA.transactions.filter(t=>t.status==='approved');
+
+  // Per-committee Wave breakdown
+  const committees=Object.values(DATA.committees);
+  const committeeWave=committees.map(c=>{
+    const txs=approvedTx.filter(t=>t.committee===c.id);
+    const waveIn=txs.filter(t=>t.type==='revenue').reduce((s,t)=>s+(t.waveAmount||0),0);
+    const waveOut=txs.filter(t=>t.type==='expense').reduce((s,t)=>s+(t.waveAmount||0),0);
+    const cashIn=txs.filter(t=>t.type==='revenue').reduce((s,t)=>s+(t.cashAmount!=null?t.cashAmount:t.amount),0);
+    const cashOut=txs.filter(t=>t.type==='expense').reduce((s,t)=>s+(t.cashAmount!=null?t.cashAmount:t.amount),0);
+    return{...c,waveIn,waveOut,waveNet:waveIn-waveOut,cashIn,cashOut,cashNet:cashIn-cashOut};
+  });
+
+  const totalWaveIn=committeeWave.reduce((s,c)=>s+c.waveIn,0);
+  const totalWaveOut=committeeWave.reduce((s,c)=>s+c.waveOut,0);
+  const totalWaveBalance=totalWaveIn-totalWaveOut;
+  const totalCashIn=committeeWave.reduce((s,c)=>s+c.cashIn,0);
+  const totalCashOut=committeeWave.reduce((s,c)=>s+c.cashOut,0);
+
+  // All Wave transactions
+  const waveTxs=approvedTx.filter(t=>(t.waveAmount||0)>0).sort((a,b)=>b.date.localeCompare(a.date));
+
+  document.getElementById('page-content').innerHTML=`
+  <!-- Top stats -->
+  <div class="stats-grid" style="margin-bottom:20px">
+    <div class="stat-card blue">
+      <div class="stat-icon">🐧</div>
+      <div class="stat-label">Wave Balance (Net)</div>
+      <div class="stat-value blue mono">${money(totalWaveBalance)}</div>
+      <div class="stat-sub">across all committees</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-icon">📥</div>
+      <div class="stat-label">Wave Revenue</div>
+      <div class="stat-value green mono">${money(totalWaveIn)}</div>
+      <div class="stat-sub">total received via Wave</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-icon">📤</div>
+      <div class="stat-label">Wave Expenses</div>
+      <div class="stat-value red mono">${money(totalWaveOut)}</div>
+      <div class="stat-sub">total paid via Wave</div>
+    </div>
+    <div class="stat-card gold">
+      <div class="stat-icon">💵</div>
+      <div class="stat-label">Physical Cash Net</div>
+      <div class="stat-value gold mono">${money(totalCashIn-totalCashOut)}</div>
+      <div class="stat-sub">cash in hand across all</div>
+    </div>
+  </div>
+
+  <!-- Per committee breakdown -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title"><span>🐧</span> Wave Breakdown by Committee</div>
+    <div class="table-wrap"><table>
+      <thead>
+        <tr>
+          <th>Committee</th>
+          <th style="color:var(--blue)">🐧 Wave In</th>
+          <th style="color:var(--red)">🐧 Wave Out</th>
+          <th style="color:var(--blue)">🐧 Wave Net</th>
+          <th style="color:var(--green)">💵 Cash In</th>
+          <th style="color:var(--red)">💵 Cash Out</th>
+          <th>Total Balance</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${committeeWave.map(c=>`<tr>
+          <td><div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px">${c.icon}</span><strong>${c.name}</strong></div></td>
+          <td class="mono" style="color:var(--green)">${money(c.waveIn)}</td>
+          <td class="mono" style="color:var(--red)">${c.waveOut?money(c.waveOut):'—'}</td>
+          <td class="mono" style="color:${c.waveNet>=0?'var(--blue)':'var(--red)'};font-weight:700">${money(c.waveNet)}</td>
+          <td class="mono" style="color:var(--green)">${money(c.cashIn)}</td>
+          <td class="mono" style="color:var(--red)">${c.cashOut?money(c.cashOut):'—'}</td>
+          <td class="mono" style="font-weight:800;color:var(--gold)">${money(c.balance)}</td>
+        </tr>`).join('')}
+        <tr style="border-top:2px solid var(--border);background:rgba(255,255,255,.03)">
+          <td style="font-weight:800">TOTAL</td>
+          <td class="mono" style="color:var(--green);font-weight:800">${money(totalWaveIn)}</td>
+          <td class="mono" style="color:var(--red);font-weight:800">${money(totalWaveOut)}</td>
+          <td class="mono" style="color:var(--blue);font-weight:800">${money(totalWaveBalance)}</td>
+          <td class="mono" style="color:var(--green);font-weight:800">${money(totalCashIn)}</td>
+          <td class="mono" style="color:var(--red);font-weight:800">${money(totalCashOut)}</td>
+          <td class="mono" style="color:var(--gold);font-weight:800">${money(committees.reduce((s,c)=>s+c.balance,0))}</td>
+        </tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <!-- Visual bars per committee -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title"><span>📊</span> Cash vs Wave per Committee</div>
+    ${committeeWave.map(c=>{
+      const total=c.cashIn+c.waveIn||1;
+      const cashPct=Math.round((c.cashIn/total)*100);
+      const wavePct=100-cashPct;
+      return`<div style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:8px"><span>${c.icon}</span><strong>${c.name}</strong></div>
+          <div style="font-size:12px;color:var(--muted)">
+            <span style="color:var(--green)">💵 ${money(c.cashIn)}</span> &nbsp;·&nbsp;
+            <span style="color:var(--blue)">🐧 ${money(c.waveIn)}</span>
+          </div>
+        </div>
+        <div style="height:10px;background:rgba(255,255,255,.06);border-radius:99px;overflow:hidden;display:flex">
+          <div style="width:${cashPct}%;background:linear-gradient(90deg,#27ae72,var(--green));transition:width 1s"></div>
+          <div style="width:${wavePct}%;background:linear-gradient(90deg,#3b7fdf,var(--blue));transition:width 1s"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px">
+          <span>💵 Cash ${cashPct}%</span>
+          <span>🐧 Wave ${wavePct}%</span>
+        </div>
+      </div>`;
+    }).join('')}
+    <div style="display:flex;gap:16px;margin-top:4px;font-size:12px">
+      <span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:2px;background:var(--green);display:inline-block"></span> Physical Cash</span>
+      <span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:2px;background:var(--blue);display:inline-block"></span> Wave</span>
+    </div>
+  </div>
+
+  <!-- Wave transaction log -->
+  <div class="card">
+    <div class="card-title"><span>🐧</span> Wave Transaction Log <span style="font-size:12px;color:var(--muted);font-weight:400">(${waveTxs.length} transactions)</span></div>
+    ${waveTxs.length?`<div class="table-wrap"><table>
+      <thead><tr><th>Description</th><th>Committee</th><th>Total</th><th>🐧 Wave</th><th>💵 Cash</th><th>Type</th><th>Date</th></tr></thead>
+      <tbody>${waveTxs.map(t=>`<tr>
+        <td style="font-weight:600">${t.desc}</td>
+        <td>${committeeTag(t.committee)}</td>
+        <td class="mono" style="color:${t.type==='expense'?'var(--red)':'var(--green)'};font-weight:700">${t.type==='expense'?'-':'+'} ${money(t.amount)}</td>
+        <td class="mono" style="color:var(--blue);font-weight:700">${money(t.waveAmount||0)}</td>
+        <td class="mono" style="color:var(--green)">${money(t.cashAmount!=null?t.cashAmount:t.amount-(t.waveAmount||0))}</td>
+        <td><span class="tag tag-${t.type}">${t.type}</span></td>
+        <td style="color:var(--muted);font-size:12px">${formatDate(t.date)}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`:`<div class="empty"><div class="empty-icon">🐧</div><div class="empty-text">No Wave transactions yet</div><div class="empty-sub">Add transactions with Wave amounts to see them here</div></div>`}
+  </div>`;
+}
+window.renderWave=renderWave;window.doLogout=doLogout;
 window.showForgotPassword=showForgotPassword;window.showLoginForm=showLoginForm;
 window.doResetPassword=doResetPassword;
 window.navigateTo=navigateTo;window.closeModal=closeModal;window.zoomImg=zoomImg;
