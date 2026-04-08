@@ -261,8 +261,22 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .img-zoom-overlay.open{display:flex}
 .img-zoom-overlay img{max-width:90vw;max-height:90vh;border-radius:10px;object-fit:contain}
 @media(max-width:900px){.stats-grid{grid-template-columns:1fr 1fr}.grid-2{grid-template-columns:1fr}.grid-3{grid-template-columns:1fr}}
-select{background:var(--navy2)!important;color:var(--white)!important;color-scheme:dark}
-select option{background:var(--navy2)!important;color:var(--white)!important}
+/* ── CUSTOM DROPDOWN ── */
+.cd{position:relative;display:inline-block;user-select:none}
+.cd-btn{display:flex;align-items:center;gap:6px;padding:7px 12px;background:var(--navy2);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:var(--white);font-size:12px;font-family:'Syne',sans-serif;cursor:pointer;white-space:nowrap;min-width:130px;justify-content:space-between}
+.cd-btn:hover{border-color:var(--gold)}
+.cd-btn .cd-arrow{font-size:9px;color:var(--muted);transition:transform .18s}
+.cd.open .cd-btn{border-color:var(--gold);background:var(--navy3)}
+.cd.open .cd-arrow{transform:rotate(180deg)}
+.cd-menu{position:absolute;top:calc(100% + 4px);left:0;min-width:100%;background:var(--navy2);border:1px solid rgba(255,255,255,.15);border-radius:8px;z-index:500;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.4);display:none}
+.cd.open .cd-menu{display:block}
+.cd-opt{padding:9px 14px;font-size:12px;font-family:'Syne',sans-serif;color:var(--white);cursor:pointer;transition:background .12s;white-space:nowrap}
+.cd-opt:hover{background:rgba(255,255,255,.06)}
+.cd-opt.selected{background:rgba(201,168,76,.12);color:var(--gold)}
+/* keep native selects for form fields inside modals but hide them */
+.form-group select{background:var(--navy2);color:var(--white);color-scheme:dark}
+.form-group select option,.field-group select option{background:var(--navy2);color:var(--white)}
+.field-group select{background:var(--navy2);color:var(--white);color-scheme:dark}
 </style>
 </head>
 <body>
@@ -584,6 +598,45 @@ function formatDate(d){if(!d)return'—';const[y,m,day]=d.split('-');const month
 function genId(){return'x'+Math.random().toString(36).slice(2,8)}
 function today(){return new Date().toISOString().slice(0,10)}
 const selStyle=`padding:7px 12px;background:var(--navy2);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:var(--white);font-size:12px;font-family:'Syne',sans-serif;outline:none;cursor:pointer`;
+
+// ── Custom Dropdown helpers ──
+// Usage: cdCreate(id, options, onChange, defaultLabel)
+// options = [{value, label}]
+function cdCreate(id, options, onChange, defaultVal=''){
+  const wrap=document.createElement('div');
+  wrap.className='cd';wrap.id='cd-'+id;
+  const current=options.find(o=>o.value===defaultVal)||options[0];
+  wrap.innerHTML=`<div class="cd-btn" onclick="cdToggle('${id}')"><span class="cd-label">${current.label}</span><span class="cd-arrow">▼</span></div>
+  <div class="cd-menu">${options.map(o=>`<div class="cd-opt${o.value===defaultVal?' selected':''}" data-val="${o.value}" onclick="cdSelect('${id}','${o.value}',this)">${o.label}</div>`).join('')}</div>`;
+  wrap._onChange=onChange;
+  wrap._value=defaultVal;
+  return wrap;
+}
+function cdToggle(id){
+  const el=document.getElementById('cd-'+id);
+  if(!el)return;
+  // close all others
+  document.querySelectorAll('.cd.open').forEach(d=>{if(d!==el)d.classList.remove('open')});
+  el.classList.toggle('open');
+}
+function cdSelect(id,val,optEl){
+  const el=document.getElementById('cd-'+id);
+  if(!el)return;
+  el._value=val;
+  el.querySelector('.cd-label').textContent=optEl.textContent;
+  el.querySelectorAll('.cd-opt').forEach(o=>o.classList.toggle('selected',o===optEl));
+  el.classList.remove('open');
+  if(el._onChange) el._onChange(val);
+}
+function cdVal(id){
+  const el=document.getElementById('cd-'+id);
+  return el?el._value:'';
+}
+// Close dropdowns when clicking outside
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.cd')) document.querySelectorAll('.cd.open').forEach(d=>d.classList.remove('open'));
+});
+window.cdToggle=cdToggle;window.cdSelect=cdSelect;
 function txRow(t,canAct){
   const u=getUserById(t.createdBy);
   const ab=t.approvedBy?getUserById(t.approvedBy):null;
@@ -882,11 +935,11 @@ function renderDashboard(){
 // ── TRANSACTIONS ──
 function getFilteredTx(){
   const isAdmin=can('view_all');
-  const status=document.getElementById('tx-f-status')?.value||'';
-  const type=document.getElementById('tx-f-type')?.value||'';
-  const committee=document.getElementById('tx-f-committee')?.value||'';
+  const status=cdVal('tx-status');
+  const type=cdVal('tx-type');
+  const committee=cdVal('tx-committee');
   const search=document.getElementById('tx-f-search')?.value?.toLowerCase()||'';
-  const sort=document.getElementById('tx-f-sort')?.value||'date-desc';
+  const sort=cdVal('tx-sort')||'date-desc';
   let txs=DATA.transactions.filter(t=>{
     if(!isAdmin&&t.committee!==currentUser.committee) return false;
     if(status&&t.status!==status) return false;
@@ -932,32 +985,13 @@ function renderTransactions(){
 
   document.getElementById('page-content').innerHTML=`
   <div class="card">
-    <!-- Filter bar -->
-    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px">
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px" id="tx-filter-bar">
       <input id="tx-f-search" placeholder="🔍 Search description…" oninput="filterTx()"
-        style="padding:7px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:var(--white);font-size:12px;font-family:'Syne',sans-serif;flex:1;min-width:160px;outline:none"/>
-      <select id="tx-f-status" onchange="filterTx()" style="${selStyle}">
-        <option value="">All Status</option>
-        <option value="pending">⏳ Pending</option>
-        <option value="approved">✓ Approved</option>
-        <option value="rejected">✗ Rejected</option>
-      </select>
-      <select id="tx-f-type" onchange="filterTx()" style="${selStyle}">
-        <option value="">All Types</option>
-        <option value="expense">📤 Expense</option>
-        <option value="revenue">📥 Revenue</option>
-      </select>
-      ${isAdmin?`<select id="tx-f-committee" onchange="filterTx()" style="${selStyle}">
-        <option value="">All Committees</option>${committeeOpts}
-      </select>`:`<select id="tx-f-committee" style="display:none"></select>`}
-      <select id="tx-f-sort" onchange="filterTx()" style="${selStyle}">
-        <option value="date-desc">📅 Date: Newest first</option>
-        <option value="date-asc">📅 Date: Oldest first</option>
-        <option value="amount-desc">💰 Amount: Highest first</option>
-        <option value="amount-asc">💰 Amount: Lowest first</option>
-        <option value="alpha-asc">🔤 A → Z</option>
-        <option value="alpha-desc">🔤 Z → A</option>
-      </select>
+        style="padding:7px 12px;background:var(--navy2);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:var(--white);font-size:12px;font-family:'Syne',sans-serif;flex:1;min-width:160px;outline:none"/>
+      <span id="cd-tx-status-wrap"></span>
+      <span id="cd-tx-type-wrap"></span>
+      ${isAdmin?`<span id="cd-tx-committee-wrap"></span>`:''}
+      <span id="cd-tx-sort-wrap"></span>
       <button onclick="clearTxFilters()" class="btn btn-ghost btn-sm">↺ Reset</button>
     </div>
     <div style="font-size:11px;color:var(--muted);margin-bottom:12px" id="tx-count">${txs.length} transaction${txs.length!==1?'s':''} shown</div>
@@ -968,15 +1002,50 @@ function renderTransactions(){
     </table>`:`<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No transactions found</div></div>`}
     </div>
   </div>`;
+
+  // Build custom dropdowns after HTML is rendered
+  const statusDD=cdCreate('tx-status',[
+    {value:'',label:'All Status'},{value:'pending',label:'⏳ Pending'},
+    {value:'approved',label:'✓ Approved'},{value:'rejected',label:'✗ Rejected'}
+  ],()=>filterTx(),'');
+  document.getElementById('cd-tx-status-wrap')?.replaceWith(statusDD);
+
+  const typeDD=cdCreate('tx-type',[
+    {value:'',label:'All Types'},{value:'expense',label:'📤 Expense'},{value:'revenue',label:'📥 Revenue'}
+  ],()=>filterTx(),'');
+  document.getElementById('cd-tx-type-wrap')?.replaceWith(typeDD);
+
+  if(isAdmin){
+    const committeeDD=cdCreate('tx-committee',[
+      {value:'',label:'All Committees'},
+      ...Object.values(DATA.committees).map(c=>({value:c.id,label:c.icon+' '+c.name}))
+    ],()=>filterTx(),'');
+    document.getElementById('cd-tx-committee-wrap')?.replaceWith(committeeDD);
+  }
+
+  const sortDD=cdCreate('tx-sort',[
+    {value:'date-desc',label:'📅 Newest first'},{value:'date-asc',label:'📅 Oldest first'},
+    {value:'amount-desc',label:'💰 Highest first'},{value:'amount-asc',label:'💰 Lowest first'},
+    {value:'alpha-asc',label:'🔤 A → Z'},{value:'alpha-desc',label:'🔤 Z → A'}
+  ],()=>filterTx(),'date-desc');
+  document.getElementById('cd-tx-sort-wrap')?.replaceWith(sortDD);
 }
 function clearTxFilters(){
-  ['tx-f-search','tx-f-status','tx-f-type','tx-f-committee','tx-f-sort'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el){el.value=el.tagName==='SELECT'?(id==='tx-f-sort'?'date-desc':''):''}
+  const search=document.getElementById('tx-f-search');
+  if(search) search.value='';
+  // Reset custom dropdowns
+  ['tx-status','tx-type','tx-committee','tx-sort'].forEach(id=>{
+    const el=document.getElementById('cd-'+id);
+    if(!el) return;
+    const defaultVal=id==='tx-sort'?'date-desc':'';
+    el._value=defaultVal;
+    const firstOpt=el.querySelector(`.cd-opt[data-val="${defaultVal}"]`)||el.querySelector('.cd-opt');
+    if(firstOpt){
+      el.querySelector('.cd-label').textContent=firstOpt.textContent;
+      el.querySelectorAll('.cd-opt').forEach(o=>o.classList.toggle('selected',o===firstOpt));
+    }
   });
   filterTx();
-  const c=document.getElementById('tx-count');
-  if(c) c.textContent=getFilteredTx().length+' transactions shown';
 }
 window.clearTxFilters=clearTxFilters;
 async function approveTransaction(id){
@@ -1001,11 +1070,11 @@ async function rejectTransaction(id){
 // ── REIMBURSEMENTS ──
 function getFilteredRm(){
   const isAdmin=can('view_all');
-  const status=document.getElementById('rm-f-status')?.value||'';
-  const committee=document.getElementById('rm-f-committee')?.value||'';
-  const receipt=document.getElementById('rm-f-receipt')?.value||'';
+  const status=cdVal('rm-status');
+  const committee=cdVal('rm-committee');
+  const receipt=cdVal('rm-receipt');
   const search=document.getElementById('rm-f-search')?.value?.toLowerCase()||'';
-  const sort=document.getElementById('rm-f-sort')?.value||'date-desc';
+  const sort=cdVal('rm-sort')||'date-desc';
   let rms=DATA.reimbursements.filter(r=>{
     if(!isAdmin&&r.committee!==currentUser.committee) return false;
     if(status&&r.status!==status) return false;
@@ -1049,32 +1118,13 @@ function renderReimbursements(){
   document.getElementById('page-content').innerHTML=`
   ${!canAct?`<div class="alert alert-info" style="margin-bottom:16px">⚠️ No receipt = no reimbursement. All requests require at least one receipt image to be approved.</div>`:''}
   <div class="card">
-    <!-- Filter bar -->
-    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px">
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px" id="rm-filter-bar">
       <input id="rm-f-search" placeholder="🔍 Search reason…" oninput="filterRm()"
-        style="${selStyle};flex:1;min-width:160px"/>
-      <select id="rm-f-status" onchange="filterRm()" style="${selStyle}">
-        <option value="">All Status</option>
-        <option value="pending">⏳ Pending</option>
-        <option value="approved">✓ Approved</option>
-        <option value="rejected">✗ Rejected</option>
-      </select>
-      ${isAdmin?`<select id="rm-f-committee" onchange="filterRm()" style="${selStyle}">
-        <option value="">All Committees</option>${committeeOpts}
-      </select>`:`<select id="rm-f-committee" style="display:none"></select>`}
-      <select id="rm-f-receipt" onchange="filterRm()" style="${selStyle}">
-        <option value="">All Receipts</option>
-        <option value="yes">🧾 Has Receipt</option>
-        <option value="no">🚫 No Receipt</option>
-      </select>
-      <select id="rm-f-sort" onchange="filterRm()" style="${selStyle}">
-        <option value="date-desc">📅 Date: Newest first</option>
-        <option value="date-asc">📅 Date: Oldest first</option>
-        <option value="amount-desc">💰 Amount: Highest first</option>
-        <option value="amount-asc">💰 Amount: Lowest first</option>
-        <option value="alpha-asc">🔤 A → Z</option>
-        <option value="alpha-desc">🔤 Z → A</option>
-      </select>
+        style="padding:7px 12px;background:var(--navy2);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:var(--white);font-size:12px;font-family:'Syne',sans-serif;flex:1;min-width:160px;outline:none"/>
+      <span id="cd-rm-status-wrap"></span>
+      ${isAdmin?`<span id="cd-rm-committee-wrap"></span>`:''}
+      <span id="cd-rm-receipt-wrap"></span>
+      <span id="cd-rm-sort-wrap"></span>
       <button onclick="clearRmFilters()" class="btn btn-ghost btn-sm">↺ Reset</button>
     </div>
     <div style="font-size:11px;color:var(--muted);margin-bottom:12px" id="rm-count">${rms.length} request${rms.length!==1?'s':''} shown</div>
@@ -1082,11 +1132,44 @@ function renderReimbursements(){
       ${rms.length?rms.map(r=>rmCard(r,canAct)).join(''):`<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No reimbursement requests</div><div class="empty-sub">Submit a request using the button above</div></div>`}
     </div>
   </div>`;
+
+  // Build custom dropdowns
+  document.getElementById('cd-rm-status-wrap')?.replaceWith(cdCreate('rm-status',[
+    {value:'',label:'All Status'},{value:'pending',label:'⏳ Pending'},
+    {value:'approved',label:'✓ Approved'},{value:'rejected',label:'✗ Rejected'}
+  ],()=>filterRm(),''));
+
+  if(isAdmin){
+    document.getElementById('cd-rm-committee-wrap')?.replaceWith(cdCreate('rm-committee',[
+      {value:'',label:'All Committees'},
+      ...Object.values(DATA.committees).map(c=>({value:c.id,label:c.icon+' '+c.name}))
+    ],()=>filterRm(),''));
+  }
+
+  document.getElementById('cd-rm-receipt-wrap')?.replaceWith(cdCreate('rm-receipt',[
+    {value:'',label:'All Receipts'},{value:'yes',label:'🧾 Has Receipt'},{value:'no',label:'🚫 No Receipt'}
+  ],()=>filterRm(),''));
+
+  document.getElementById('cd-rm-sort-wrap')?.replaceWith(cdCreate('rm-sort',[
+    {value:'date-desc',label:'📅 Newest first'},{value:'date-asc',label:'📅 Oldest first'},
+    {value:'amount-desc',label:'💰 Highest first'},{value:'amount-asc',label:'💰 Lowest first'},
+    {value:'alpha-asc',label:'🔤 A → Z'},{value:'alpha-desc',label:'🔤 Z → A'}
+  ],()=>filterRm(),'date-desc'));
+}
 }
 function clearRmFilters(){
-  ['rm-f-search','rm-f-status','rm-f-committee','rm-f-receipt','rm-f-sort'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el){el.value=el.tagName==='SELECT'?(id==='rm-f-sort'?'date-desc':''):''}
+  const search=document.getElementById('rm-f-search');
+  if(search) search.value='';
+  ['rm-status','rm-committee','rm-receipt','rm-sort'].forEach(id=>{
+    const el=document.getElementById('cd-'+id);
+    if(!el) return;
+    const defaultVal=id==='rm-sort'?'date-desc':'';
+    el._value=defaultVal;
+    const firstOpt=el.querySelector(`.cd-opt[data-val="${defaultVal}"]`)||el.querySelector('.cd-opt');
+    if(firstOpt){
+      el.querySelector('.cd-label').textContent=firstOpt.textContent;
+      el.querySelectorAll('.cd-opt').forEach(o=>o.classList.toggle('selected',o===firstOpt));
+    }
   });
   filterRm();
 }
