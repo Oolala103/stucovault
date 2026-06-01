@@ -97,6 +97,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .badge-treasurer{background:rgba(201,168,76,.2);color:var(--gold)}
 .badge-supervisor{background:rgba(79,156,249,.2);color:var(--blue)}
 .badge-member{background:rgba(62,207,142,.2);color:var(--green)}
+.badge-temp{background:rgba(167,139,250,.2);color:var(--purple)}
+.badge-exec{background:rgba(45,212,191,.2);color:var(--teal)}
 nav{flex:1;padding:12px 10px;overflow-y:auto}
 .nav-section{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:10px 10px 6px;margin-top:6px}
 .nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;transition:var(--trans);font-size:13px;font-weight:500;color:var(--muted);position:relative}
@@ -641,21 +643,24 @@ window.cdToggle=cdToggle;window.cdSelect=cdSelect;
 function txRow(t,canAct){
   const u=getUserById(t.createdBy);
   const ab=t.approvedBy?getUserById(t.approvedBy):null;
+  const canEdit = canAct || canEditRecord(t);
   let actionCell='';
-  if(canAct){
+  if(canEdit){
     if(t.status==='pending'){
       actionCell=`<td><div style="display:flex;gap:5px;flex-wrap:wrap">
-        <button class="btn btn-green btn-sm" onclick="approveTransaction('${t.id}')">✓ Approve</button>
-        <button class="btn btn-red btn-sm" onclick="rejectTransaction('${t.id}')">✗ Reject</button>
+        ${canAct?`<button class="btn btn-green btn-sm" onclick="approveTransaction('${t.id}')">✓ Approve</button>
+        <button class="btn btn-red btn-sm" onclick="rejectTransaction('${t.id}')">✗ Reject</button>`:''}
         <button class="btn btn-ghost btn-sm" onclick="openEditTransaction('${t.id}')">✎</button>
         <button class="btn btn-red btn-sm" onclick="deleteTransaction('${t.id}')">🗑</button>
       </div></td>`;
-    } else {
+    } else if(canAct) {
       actionCell=`<td><div style="display:flex;gap:5px;flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="reverseTransaction('${t.id}')">↩ Reverse</button>
         <button class="btn btn-ghost btn-sm" onclick="openEditTransaction('${t.id}')">✎ Edit</button>
         <button class="btn btn-red btn-sm" onclick="deleteTransaction('${t.id}')">🗑</button>
       </div></td>`;
+    } else {
+      actionCell='<td>—</td>';
     }
   }
   return`<tr id="tr-${t.id}">
@@ -671,7 +676,7 @@ function txRow(t,canAct){
     <td><div style="font-size:13px">${u?.name||'?'}</div><div style="font-size:10px;color:var(--muted)">${u?.email||''}</div></td>
     <td style="color:var(--muted);font-size:12px">${formatDate(t.date)}</td>
     <td><span class="status status-${t.status}">${t.status}</span></td>
-    ${actionCell}
+    ${canEdit?actionCell:''}
   </tr>`;
 }
 
@@ -764,9 +769,10 @@ async function doEditTransaction(id){
   err.style.display='none';
   if(!desc){document.getElementById('et-desc-err').style.display='block';return}
   if(!amount||amount<=0){document.getElementById('et-amount-err').style.display='block';return}
-  await dbUpdate('transactions',id,{desc,amount,type,committee,date,status,
-    approvedBy:status!=='pending'?currentUser.id:null,
-    approvedDate:status!=='pending'?today():null});
+  const before=DATA.transactions.find(x=>x.id===id);
+  const after={desc,amount,type,committee,date,status,approvedBy:status!=='pending'?currentUser.id:null,approvedDate:status!=='pending'?today():null};
+  await dbUpdate('transactions',id,after);
+  await auditLog('edit_transaction','transactions',id,{desc:before.desc,amount:before.amount,type:before.type,committee:before.committee,date:before.date,status:before.status},after);
   closeModal();toast('Transaction updated','success');
 }
 
@@ -788,7 +794,9 @@ async function deleteTransaction(id){
   </div>`);
 }
 async function doDeleteTransaction(id){
+  const before=DATA.transactions.find(x=>x.id===id);
   await dbDelete('transactions',id);
+  await auditLog('delete_transaction','transactions',id,before,null);
   closeModal();toast('Transaction deleted','error');
 }
 
@@ -837,7 +845,9 @@ async function deleteReimbursement(id){
   </div>`);
 }
 async function doDeleteReimbursement(id){
+  const before=DATA.reimbursements.find(x=>x.id===id);
   await dbDelete('reimbursements',id);
+  await auditLog('delete_reimbursement','reimbursements',id,before,null);
   closeModal();toast('Reimbursement deleted','error');
 }
 
@@ -846,16 +856,102 @@ window.openEditTransaction=openEditTransaction;window.doEditTransaction=doEditTr
 window.deleteTransaction=deleteTransaction;window.doDeleteTransaction=doDeleteTransaction;
 window.reverseReimbursement=reverseReimbursement;window.doReverseReimbursement=doReverseReimbursement;
 window.deleteReimbursement=deleteReimbursement;window.doDeleteReimbursement=doDeleteReimbursement;
+// ═══════════════════════════════════════════════
+//  PERMISSIONS ENGINE
+// ═══════════════════════════════════════════════
+const PERMISSIONS = {
+  // Financial actions
+  add_transaction:          ['treasurer','temp_treasurer','supervisor','exec','member'],
+  delete_transaction:       ['treasurer','temp_treasurer','supervisor','exec','member'],
+  edit_transaction:         ['treasurer','temp_treasurer','supervisor','exec','member'],
+  add_reimbursement:        ['treasurer','temp_treasurer','supervisor','exec','member'],
+  approve_reimbursement:    ['treasurer','temp_treasurer','supervisor','exec'],
+  view_transaction_history: ['treasurer','temp_treasurer','supervisor','exec','member'],
+  // Budget & allocations
+  view_committee_balances:  ['treasurer','temp_treasurer','supervisor','exec','member'],
+  allocate_budget:          ['treasurer','temp_treasurer','supervisor','exec'],
+  edit_allocation:          ['treasurer','temp_treasurer','supervisor','exec'],
+  view_budget_summary:      ['treasurer','temp_treasurer','supervisor','exec','member'],
+  // Cash counter
+  view_cash_counter:        ['treasurer','temp_treasurer','supervisor','exec'],
+  edit_bill_counts:         ['treasurer','temp_treasurer','supervisor','exec'],
+  reconcile_cash:           ['treasurer','temp_treasurer','supervisor','exec'],
+  // Committee management
+  view_committees:          ['treasurer','temp_treasurer','supervisor','exec','member'],
+  create_committee:         ['treasurer','temp_treasurer'],
+  delete_committee:         ['treasurer','temp_treasurer'],
+  assign_member:            ['treasurer','temp_treasurer','supervisor','exec'],
+  // User management
+  view_members:             ['treasurer','temp_treasurer','supervisor','exec','member'],
+  add_user:                 ['treasurer','temp_treasurer','supervisor','exec'],
+  delete_user:              ['treasurer','temp_treasurer','supervisor','exec'],
+  change_role:              ['treasurer','temp_treasurer','supervisor','exec'],
+  reset_password:           ['treasurer','temp_treasurer','supervisor'],
+  // Reports & data
+  view_dashboard:           ['treasurer','temp_treasurer','supervisor','exec','member'],
+  export_data:              ['treasurer','temp_treasurer','supervisor','exec','member'],
+  view_audit_logs:          ['treasurer','temp_treasurer','supervisor','exec','member'],
+  // Archive system
+  trigger_archive:          ['treasurer','temp_treasurer','exec'],
+  view_archives:            ['treasurer','temp_treasurer','supervisor','exec','member'],
+  navigate_archives:        ['treasurer','temp_treasurer','supervisor','exec','member'],
+  edit_opening_balances:    ['treasurer','temp_treasurer','exec'],
+  edit_archived_data:       ['treasurer','temp_treasurer'],
+  // Settings
+  change_own_password:      ['treasurer','temp_treasurer','supervisor','exec','member'],
+  change_system_settings:   ['treasurer','temp_treasurer','exec'],
+  manage_roles:             ['treasurer','temp_treasurer','supervisor','exec'],
+  // Legacy aliases used throughout the codebase
+  approve_transaction:      ['treasurer','temp_treasurer','supervisor','exec'],
+  view_all:                 ['treasurer','temp_treasurer','supervisor','exec'],
+  manage_members:           ['treasurer','temp_treasurer'],
+  view_reports:             ['treasurer','temp_treasurer','supervisor','exec','member'],
+  assign_temp_treasurer:    ['treasurer','temp_treasurer'],
+};
+
 function can(action){
-  const r=currentUser.role;
-  const perms={
-    approve_transaction:['treasurer','supervisor'],
-    approve_reimbursement:['treasurer','supervisor'],
-    view_all:['treasurer','supervisor'],
-    manage_members:['treasurer'],
-    view_reports:['treasurer'],
-  };
-  return (perms[action]||[]).includes(r);
+  if(!currentUser) return false;
+  const r = currentUser.role;
+  return (PERMISSIONS[action]||[]).includes(r);
+}
+
+// Ownership check — members can only edit/delete their own pending records
+function canEditRecord(record){
+  if(!currentUser) return false;
+  const r = currentUser.role;
+  if(['treasurer','temp_treasurer','supervisor','exec'].includes(r)) return true;
+  // Member: only their own records that are still pending
+  return record.createdBy === currentUser.id && record.status === 'pending';
+}
+
+function canDeleteRecord(record){
+  return canEditRecord(record);
+}
+
+// Role display helpers
+const ROLE_META = {
+  treasurer:      { label:'Treasurer',      badge:'badge-treasurer', icon:'🏛' },
+  temp_treasurer: { label:'Temp Treasurer', badge:'badge-temp',      icon:'⏳' },
+  supervisor:     { label:'Supervisor',     badge:'badge-supervisor',icon:'🔍' },
+  exec:           { label:'Exec',           badge:'badge-exec',      icon:'⭐' },
+  member:         { label:'Member',         badge:'badge-member',    icon:'👤' },
+};
+
+// Audit log — write every change with before/after
+async function auditLog(action, collection, recordId, before, after){
+  try{
+    await dbAdd('audit_logs',{
+      action,
+      collection,
+      recordId,
+      before: before||null,
+      after: after||null,
+      changedBy: currentUser.id,
+      changedByName: currentUser.name,
+      changedByRole: currentUser.role,
+      timestamp: new Date().toISOString(),
+    });
+  } catch(e){ console.warn('Audit log failed:',e); }
 }
 function avatarBg(color){
   const map={
@@ -970,10 +1066,9 @@ function setupSidebar(){
   const b=document.getElementById('sb-badge');
   n.textContent=currentUser.name;
   un.textContent=currentUser.email||('@'+currentUser.username)||'';
-  const bMap={treasurer:'badge-treasurer 🏛 Treasurer',supervisor:'badge-supervisor 🔍 Supervisor',member:'badge-member 👤 Member'};
-  const [cls,txt]=bMap[currentUser.role].split(' ');
-  b.className='sidebar-badge '+cls;
-  b.textContent=bMap[currentUser.role].slice(cls.length+1);
+  const rm = ROLE_META[currentUser.role]||ROLE_META.member;
+  b.className='sidebar-badge '+rm.badge;
+  b.textContent=rm.icon+' '+rm.label;
 
   const pending=DATA.transactions.filter(t=>t.status==='pending').length+
                 DATA.reimbursements.filter(r=>r.status==='pending').length;
@@ -984,14 +1079,20 @@ function setupSidebar(){
   <div class="nav-item" onclick="navigateTo('reimbursements')"><span class="nav-icon">⟳</span>Reimbursements${can('approve_reimbursement')?`<span class="nav-badge">${DATA.reimbursements.filter(r=>r.status==='pending').length}</span>`:''}</div>
   <div class="nav-item" onclick="navigateTo('committees')"><span class="nav-icon">◈</span>Committees</div>
   <div class="nav-item" onclick="navigateTo('transparency')"><span class="nav-icon">◎</span>Transparency</div>
-  ${can('view_all')?`<div class="nav-item" onclick="navigateTo('cashcounter')"><span class="nav-icon">💵</span>Cash Counter</div>`:''}
-  ${can('view_all')?`<div class="nav-item" onclick="navigateTo('wave')"><span class="nav-icon">🐧</span>Wave</div>`:''}`;
-  if(can('view_all')){
+  ${can('view_cash_counter')?`<div class="nav-item" onclick="navigateTo('cashcounter')"><span class="nav-icon">💵</span>Cash Counter</div>`:''}
+  ${can('view_cash_counter')?`<div class="nav-item" onclick="navigateTo('wave')"><span class="nav-icon">🐧</span>Wave</div>`:''}`;
+  if(can('view_members')){
     nav+=`<div class="nav-section">Management</div>
     <div class="nav-item" onclick="navigateTo('members')"><span class="nav-icon">◻</span>Members</div>`;
   }
-  if(can('manage_members')){
+  if(can('create_committee')){
     nav+=`<div class="nav-item" onclick="navigateTo('manage_committees')"><span class="nav-icon">⬡</span>Committees</div>`;
+  }
+  if(can('view_archives')){
+    nav+=`<div class="nav-item" onclick="navigateTo('archive')"><span class="nav-icon">🗄</span>Archive</div>`;
+  }
+  if(can('view_audit_logs')){
+    nav+=`<div class="nav-item" onclick="navigateTo('audit_log')"><span class="nav-icon">📋</span>Audit Log</div>`;
   }
   nav+=`<div class="nav-section">Account</div>
   <div class="nav-item" onclick="navigateTo('account')"><span class="nav-icon">◉</span>My Account</div>`;
@@ -1013,7 +1114,7 @@ function navigateTo(page){
     dashboard:'Dashboard',transactions:'Transactions',reimbursements:'Reimbursements',
     committees:'Committees',transparency:'Transparency',members:'Member Management',
     manage_committees:'Committee Management',account:'My Account',cashcounter:'Cash Counter',
-    wave:'Wave Account'
+    wave:'Wave Account',archive:'Archive',audit_log:'Audit Log'
   };
   const subs={
     dashboard:`Welcome back, ${currentUser.name}`,
@@ -1025,9 +1126,11 @@ function navigateTo(page){
     manage_committees:'Add, edit or remove committees',
     account:'Your profile and security settings',
     cashcounter:'Count and verify physical CFA bills',
-    wave:'Track Wave digital payments per committee'
+    wave:'Track Wave digital payments per committee',
+    archive:'Browse historical data by academic year',
+    audit_log:'Full change history with before & after'
   };
-  document.getElementById('top-title').textContent=titles[page];
+  document.getElementById('top-title').textContent=titles[page]||page;
   document.getElementById('top-sub').textContent=subs[page]||'';
   const pages={
     dashboard:renderDashboard,
@@ -1040,6 +1143,8 @@ function navigateTo(page){
     account:renderAccount,
     cashcounter:renderCashCounter,
     wave:renderWave,
+    archive:renderArchive,
+    audit_log:renderAuditLog,
   };
   (pages[page]||renderDashboard)();
 }
@@ -1260,11 +1365,17 @@ async function approveTransaction(id){
     const c=DATA.committees[t.committee];
     await dbUpdate('committees',t.committee,{balance:c.balance+t.amount});
   }
+  const before={status:t.status,approvedBy:t.approvedBy,approvedDate:t.approvedDate};
   await dbUpdate('transactions',id,{status:'approved',approvedBy:currentUser.id,approvedDate:today()});
+  await auditLog('approve_transaction','transactions',id,before,{status:'approved',approvedBy:currentUser.id,approvedDate:today()});
   toast('Transaction approved','success');
 }
 async function rejectTransaction(id){
+  const t=DATA.transactions.find(x=>x.id===id);
+  if(!t)return;
+  const before={status:t.status};
   await dbUpdate('transactions',id,{status:'rejected',approvedBy:currentUser.id,approvedDate:today()});
+  await auditLog('reject_transaction','transactions',id,before,{status:'rejected',approvedBy:currentUser.id,approvedDate:today()});
   toast('Transaction rejected','error');
 }
 
@@ -1681,7 +1792,13 @@ function memberRowHtml(m){
   const c=m.committee?DATA.committees[m.committee]:null;
   const avatarColors=['#c9a84c','#4f9cf9','#3ecf8e','#f5a623','#e05252','#a78bfa','#f472b6','#2dd4bf'];
   const bg=avatarColors[DATA.users.indexOf(m)%avatarColors.length];
-  const roleBadge={'supervisor':'badge-supervisor 🔍 Supervisor','member':'badge-member 👤 Member'};
+  const roleBadge={
+    'treasurer':'badge-treasurer 🏛 Treasurer',
+    'temp_treasurer':'badge-temp ⏳ Temp Treasurer',
+    'supervisor':'badge-supervisor 🔍 Supervisor',
+    'exec':'badge-exec ⭐ Exec',
+    'member':'badge-member 👤 Member'
+  };
   const [badgeCls,badgeTxt]=(roleBadge[m.role]||'badge-member 👤 Member').split(' ').reduce((a,v,i)=>i===0?[v,a[1]]:[a[0],a[1]+' '+v],['','']);
   const canEdit=can('manage_members')||can('approve_transaction'); // treasurer + supervisor
   return`<div class="member-row" id="mr-${m.id}">
@@ -1915,7 +2032,9 @@ function openAddMember(){
         <label>Role</label>
         <select id="nm-role" onchange="toggleCommitteeField(this.value)">
           <option value="member">👤 Member</option>
+          <option value="exec">⭐ Exec</option>
           <option value="supervisor">🔍 Supervisor</option>
+          <option value="temp_treasurer">⏳ Temp Treasurer</option>
         </select>
       </div>
     </div>
@@ -1928,6 +2047,9 @@ function openAddMember(){
     </div>
     <div id="nm-supervisor-note" style="display:none;background:rgba(79,156,249,.08);border:1px solid rgba(79,156,249,.2);border-radius:8px;padding:12px;font-size:12px;color:var(--blue)">
       🔍 Supervisors can view all committees, verify purchases, and approve or reject requests.
+    </div>
+    <div id="nm-temp-warn" style="display:none;background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.3);border-radius:8px;padding:12px;font-size:12px;color:var(--orange)">
+      ⚠️ <strong>Temp Treasurer Warning:</strong> This role has the same access level as the Treasurer. Only assign this to a trusted board member. Multiple Temp Treasurers can exist simultaneously. This role must be manually revoked.
     </div>
     <div style="background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);border-radius:8px;padding:12px;font-size:12px;color:var(--gold)">
       ⚠️ The email must end in @icsabidjan.org. A Firebase Auth account will be created automatically. The user can reset their password anytime from the login page.
@@ -1942,8 +2064,12 @@ function openAddMember(){
 function toggleCommitteeField(role){
   const cg=document.getElementById('nm-committee-group');
   const sn=document.getElementById('nm-supervisor-note');
-  if(cg)cg.style.display=role==='supervisor'?'none':'flex';
-  if(sn)sn.style.display=role==='supervisor'?'block':'none';
+  const noCommitteeRoles=['supervisor','temp_treasurer'];
+  if(cg)cg.style.display=noCommitteeRoles.includes(role)?'none':'flex';
+  if(sn)sn.style.display=noCommitteeRoles.includes(role)?'block':'none';
+  // Warn about temp treasurer
+  const tw=document.getElementById('nm-temp-warn');
+  if(tw)tw.style.display=role==='temp_treasurer'?'block':'none';
 }
 async function doAddMember(){
   const name=document.getElementById('nm-name').value.trim();
@@ -2924,6 +3050,233 @@ window.confirmDeleteCommittee=confirmDeleteCommittee;window.doDeleteCommittee=do
 window.saveProfile=saveProfile;window.changePassword=changePassword;
 window.filterTx=filterTx;window.handleReceiptUpload=handleReceiptUpload;
 window.removeReceipt=removeReceipt;
+
+// ═══════════════════════════════════════════════
+//  AUDIT LOG PAGE
+// ═══════════════════════════════════════════════
+async function renderAuditLog(){
+  if(!can('view_audit_logs')){ document.getElementById('page-content').innerHTML=`<div class="empty"><div class="empty-icon">🔒</div><div class="empty-text">Access denied</div></div>`; return; }
+  document.getElementById('top-actions').innerHTML='';
+  document.getElementById('page-content').innerHTML=`<div class="card"><div style="text-align:center;padding:32px;color:var(--muted)">Loading audit log…</div></div>`;
+  try{
+    const snap = await getDocs(query(collection(db,'audit_logs'),orderBy('timestamp','desc')));
+    const logs = snap.docs.map(d=>({id:d.id,...d.data()}));
+    const ACTION_LABELS={
+      approve_transaction:'✓ Approved transaction',reject_transaction:'✗ Rejected transaction',
+      edit_transaction:'✎ Edited transaction',delete_transaction:'🗑 Deleted transaction',
+      delete_reimbursement:'🗑 Deleted reimbursement',add_transaction:'＋ Added transaction',
+      edit_archived_data:'📝 Edited archived data',archive_year:'🗄 Archived year',
+    };
+    document.getElementById('page-content').innerHTML=`
+    <div class="card">
+      <div class="card-title" style="margin-bottom:16px"><span>📋</span> Full change history — ${logs.length} entries</div>
+      ${logs.length?`<div class="table-wrap"><table>
+        <thead><tr><th>Action</th><th>Record</th><th>Changed By</th><th>Role</th><th>Before</th><th>After</th><th>Timestamp</th></tr></thead>
+        <tbody>${logs.map(l=>`<tr>
+          <td><span style="font-size:12px;font-weight:600">${ACTION_LABELS[l.action]||l.action}</span></td>
+          <td><span style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">${l.recordId||'—'}</span></td>
+          <td><div style="font-size:13px;font-weight:600">${l.changedByName||'?'}</div></td>
+          <td><span class="sidebar-badge ${ROLE_META[l.changedByRole]?.badge||'badge-member'}" style="font-size:10px">${ROLE_META[l.changedByRole]?.icon||'👤'} ${ROLE_META[l.changedByRole]?.label||l.changedByRole}</span></td>
+          <td><pre style="font-size:10px;color:var(--muted);white-space:pre-wrap;max-width:160px;margin:0">${l.before?JSON.stringify(l.before,null,1):'—'}</pre></td>
+          <td><pre style="font-size:10px;color:var(--green);white-space:pre-wrap;max-width:160px;margin:0">${l.after?JSON.stringify(l.after,null,1):'—'}</pre></td>
+          <td style="font-size:11px;color:var(--muted)">${l.timestamp?new Date(l.timestamp).toLocaleString():'—'}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>`:`<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No changes logged yet</div><div class="empty-sub">Changes will appear here as actions are taken</div></div>`}
+    </div>`;
+  } catch(e){
+    document.getElementById('page-content').innerHTML=`<div class="card"><div style="padding:32px;color:var(--red)">Error loading audit log: ${e.message}</div></div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  ARCHIVE PAGE
+// ═══════════════════════════════════════════════
+let archiveData = [];
+let selectedArchiveIdx = 0;
+
+async function loadArchiveData(){
+  try{
+    const snap = await getDocs(query(collection(db,'stucovault_archives'),orderBy('archivedAt','desc')));
+    archiveData = snap.docs.map(d=>({id:d.id,...d.data()}));
+  } catch(e){ archiveData=[]; }
+}
+
+async function renderArchive(){
+  if(!can('view_archives')){ document.getElementById('page-content').innerHTML=`<div class="empty"><div class="empty-icon">🔒</div><div class="empty-text">Access denied</div></div>`; return; }
+  document.getElementById('top-actions').innerHTML=can('trigger_archive')?`<button class="btn btn-gold btn-sm" onclick="openArchiveModal()">🗄 Archive This Year</button>`:'';
+  await loadArchiveData();
+
+  if(!archiveData.length){
+    document.getElementById('page-content').innerHTML=`
+    <div class="card" style="text-align:center;padding:48px">
+      <div style="font-size:40px;margin-bottom:16px">🗄️</div>
+      <div style="font-size:17px;font-weight:700;margin-bottom:8px">No archives yet</div>
+      <div style="font-size:13px;color:var(--muted)">At the end of each academic year, use the "Archive This Year" button to snapshot all data.</div>
+    </div>`; return;
+  }
+
+  const arch = archiveData[selectedArchiveIdx];
+  const txs = arch.transactions||[];
+  const committees = arch.committees||{};
+  const totalBudget = Object.values(committees).reduce((a,c)=>a+(c.allocated||0),0);
+  const totalSpent = txs.filter(t=>t.type==='expense').reduce((a,t)=>a+Number(t.amount),0);
+  const totalIncome = txs.filter(t=>t.type==='revenue').reduce((a,t)=>a+Number(t.amount),0);
+
+  document.getElementById('page-content').innerHTML=`
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;align-items:center">
+    <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-right:8px">Year</span>
+    ${archiveData.map((a,i)=>`<button onclick="selectArchive(${i})" style="padding:6px 16px;border-radius:99px;border:1px solid ${i===selectedArchiveIdx?'var(--gold)':'rgba(255,255,255,.15)'};background:${i===selectedArchiveIdx?'rgba(201,168,76,.15)':'transparent'};color:${i===selectedArchiveIdx?'var(--gold)':'var(--muted)'};font-family:'Syne',sans-serif;font-size:13px;font-weight:600;cursor:pointer">${a.year}</button>`).join('')}
+  </div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:20px">Archived on ${new Date(arch.archivedAt).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})} · ${txs.length} transactions</div>
+  <div class="stats-grid" style="margin-bottom:24px">
+    <div class="stat-card gold"><div class="stat-icon">💰</div><div class="stat-label">Total Budget</div><div class="stat-value gold">${money(totalBudget)}</div></div>
+    <div class="stat-card red"><div class="stat-icon">📤</div><div class="stat-label">Total Spent</div><div class="stat-value red">${money(totalSpent)}</div></div>
+    <div class="stat-card green"><div class="stat-icon">📥</div><div class="stat-label">Total Income</div><div class="stat-value green">${money(totalIncome)}</div></div>
+    <div class="stat-card blue"><div class="stat-icon">📁</div><div class="stat-label">Transactions</div><div class="stat-value blue">${txs.length}</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title" style="margin-bottom:16px"><span>↔</span> Transactions — ${arch.year}
+      ${can('edit_archived_data')?`<span style="font-size:11px;color:var(--orange);margin-left:12px">⚠️ Edits to archived data are tracked</span>`:''}
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Description</th><th>Committee</th><th>Amount</th><th>Type</th><th>Date</th><th>Status</th>${can('edit_archived_data')?'<th>Action</th>':''}</tr></thead>
+      <tbody>${txs.length?txs.sort((a,b)=>b.date.localeCompare(a.date)).map(t=>`<tr>
+        <td style="font-weight:600">${t.desc}</td>
+        <td>${committeeTag(t.committee)||t.committee||'—'}</td>
+        <td class="mono" style="color:${t.type==='expense'?'var(--red)':'var(--green)'}">${t.type==='expense'?'-':'+'} ${money(t.amount)}</td>
+        <td><span class="tag tag-${t.type}">${t.type}</span></td>
+        <td style="color:var(--muted);font-size:12px">${formatDate(t.date)}</td>
+        <td><span class="status status-${t.status||'approved'}">${t.status||'approved'}</span></td>
+        ${can('edit_archived_data')?`<td><button class="btn btn-ghost btn-sm" onclick="openEditArchivedTx('${arch.id}','${t.id}')">✎ Edit</button></td>`:''}
+      </tr>`).join(''):`<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted)">No transactions in this archive</td></tr>`}
+      </tbody>
+    </table></div>
+  </div>`;
+}
+window.selectArchive=function(i){ selectedArchiveIdx=i; renderArchive(); };
+
+function openArchiveModal(){
+  if(!can('trigger_archive')){ toast('Access denied','error'); return; }
+  const year = new Date().getFullYear();
+  openModal(`<div class="modal-title">🗄 Archive Current Year</div>
+  <div class="modal-sub">Snapshot all data and start fresh for the new academic year</div>
+  <div class="form-grid">
+    <div class="form-group"><label>Academic Year Label</label><input id="arch-year-label" placeholder="e.g. 2024–2025" value="${year-1}–${year}"/></div>
+  </div>
+  <div style="background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);border-radius:8px;padding:12px;font-size:12px;color:var(--gold);margin-bottom:4px">
+    📸 All transactions, committee balances, and allocations will be snapshotted. You'll set new opening balances before the year starts.
+  </div>
+  <p id="arch-err" style="color:var(--red);font-size:12px;margin-top:8px;display:none"></p>
+  <div class="form-actions" style="margin-top:16px">
+    <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-gold btn-sm" onclick="proceedToNewYearSetup()">Continue →</button>
+  </div>`);
+}
+window.openArchiveModal=openArchiveModal;
+
+async function proceedToNewYearSetup(){
+  const label=document.getElementById('arch-year-label').value.trim();
+  if(!label){ document.getElementById('arch-err').textContent='Please enter a year label.'; document.getElementById('arch-err').style.display='block'; return; }
+  const sections = Object.values(DATA.committees);
+  closeModal();
+  openModal(`<div class="modal-title">New Year — Opening Balances</div>
+  <div class="modal-sub">Review and edit the carried-over balances before the new year starts</div>
+  <div style="background:rgba(62,207,142,.08);border:1px solid rgba(62,207,142,.2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--green);margin-bottom:16px">
+    💡 Carried-over balance = last year's remaining balance. Edit any amounts to handle reallocations or corrections.
+  </div>
+  <div style="max-height:340px;overflow-y:auto">
+    ${sections.map(c=>`<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:10px 14px;background:rgba(255,255,255,.04);border-radius:8px">
+      <div style="flex:1"><div style="font-weight:600;font-size:14px">${c.icon} ${c.name}</div><div style="font-size:11px;color:var(--muted)">Last balance: ${money(c.balance)}</div></div>
+      <input type="number" id="ny-bal-${c.id}" value="${c.balance}" min="0" style="width:140px;padding:8px;background:var(--navy2);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:var(--white);font-family:'Syne',sans-serif;font-size:13px"> CFA
+    </div>`).join('')}
+  </div>
+  <p id="ny-err" style="color:var(--red);font-size:12px;margin-top:8px;display:none"></p>
+  <div class="form-actions" style="margin-top:16px">
+    <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-red btn-sm" onclick="confirmArchive('${label}')">🗄 Archive &amp; Start New Year</button>
+  </div>`);
+}
+window.proceedToNewYearSetup=proceedToNewYearSetup;
+
+async function confirmArchive(label){
+  const snapshot={
+    year:label,
+    archivedAt:new Date().toISOString(),
+    archivedBy:currentUser.id,
+    archivedByName:currentUser.name,
+    transactions:JSON.parse(JSON.stringify(DATA.transactions)),
+    committees:JSON.parse(JSON.stringify(DATA.committees)),
+  };
+  try{ await dbAdd('stucovault_archives',snapshot); } catch(e){ console.warn('Archive save failed',e); }
+  await auditLog('archive_year','stucovault_archives',label,null,{year:label,txCount:DATA.transactions.length});
+  // Apply new opening balances
+  for(const c of Object.values(DATA.committees)){
+    const newBal=parseInt(document.getElementById('ny-bal-'+c.id)?.value||c.balance);
+    await dbUpdate('committees',c.id,{balance:newBal,allocated:newBal});
+  }
+  // Clear all transactions
+  for(const t of DATA.transactions) await dbDelete('transactions',t.id);
+  for(const r of DATA.reimbursements) await dbDelete('reimbursements',r.id);
+  closeModal();
+  toast(`Year "${label}" archived. New year started!`,'success');
+  await loadArchiveData();
+  navigateTo('archive');
+}
+window.confirmArchive=confirmArchive;
+
+async function openEditArchivedTx(archId, txId){
+  if(!can('edit_archived_data')){ toast('Access denied','error'); return; }
+  const arch=archiveData.find(a=>a.id===archId);
+  if(!arch) return;
+  const t=(arch.transactions||[]).find(x=>x.id===txId);
+  if(!t) return;
+  openModal(`<div class="modal-title">✎ Edit Archived Transaction</div>
+  <div class="modal-sub" style="color:var(--orange)">⚠️ This edit will be tracked in the audit log with before & after values</div>
+  <div class="form-grid">
+    <div class="form-group"><label>Description</label><input id="eat-desc" value="${t.desc}"/></div>
+    <div class="form-row">
+      <div class="form-group"><label>Amount (CFA)</label><input type="number" id="eat-amount" value="${t.amount}" min="0"/></div>
+      <div class="form-group"><label>Type</label>
+        <select id="eat-type" style="background:var(--navy2);color:var(--white);padding:10px;border:1px solid rgba(255,255,255,.1);border-radius:8px;font-family:'Syne',sans-serif">
+          <option value="expense" ${t.type==='expense'?'selected':''}>📤 Expense</option>
+          <option value="revenue" ${t.type==='revenue'?'selected':''}>📥 Revenue</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label>Date</label><input type="date" id="eat-date" value="${t.date}"/></div>
+  </div>
+  <div class="form-actions" style="margin-top:16px">
+    <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-gold btn-sm" onclick="doEditArchivedTx('${archId}','${txId}')">Save Tracked Edit</button>
+  </div>`);
+}
+window.openEditArchivedTx=openEditArchivedTx;
+
+async function doEditArchivedTx(archId, txId){
+  const arch=archiveData.find(a=>a.id===archId);
+  if(!arch) return;
+  const txIdx=(arch.transactions||[]).findIndex(x=>x.id===txId);
+  if(txIdx===-1) return;
+  const before={...arch.transactions[txIdx]};
+  const after={
+    ...before,
+    desc:document.getElementById('eat-desc').value.trim(),
+    amount:parseInt(document.getElementById('eat-amount').value),
+    type:document.getElementById('eat-type').value,
+    date:document.getElementById('eat-date').value,
+    lastEditedBy:currentUser.id,
+    lastEditedByName:currentUser.name,
+    lastEditedAt:new Date().toISOString(),
+  };
+  arch.transactions[txIdx]=after;
+  await dbUpdate('stucovault_archives',archId,{transactions:arch.transactions});
+  await auditLog('edit_archived_data','stucovault_archives',archId+'/'+txId,before,after);
+  closeModal();
+  toast('Archived transaction updated (tracked)','success');
+  renderArchive();
+}
+window.doEditArchivedTx=doEditArchivedTx;
+
 </script>
 </body>
 </html>
