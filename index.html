@@ -95,6 +95,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .sidebar-user-role{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:2px}
 .sidebar-badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:600;margin-top:5px}
 .badge-treasurer{background:rgba(201,168,76,.2);color:var(--gold)}
+.badge-president{background:rgba(251,113,133,.2);color:var(--rose)}
 .badge-supervisor{background:rgba(79,156,249,.2);color:var(--blue)}
 .badge-member{background:rgba(62,207,142,.2);color:var(--green)}
 .badge-admin{background:rgba(167,139,250,.25);color:#a78bfa;border:1px solid rgba(167,139,250,.3)}
@@ -850,14 +851,14 @@ window.reverseReimbursement=reverseReimbursement;window.doReverseReimbursement=d
 window.deleteReimbursement=deleteReimbursement;window.doDeleteReimbursement=doDeleteReimbursement;
 function can(action){
   const r=currentUser.role;
-  if(r==='admin') return true; // Admin can do everything
+  if(r==='admin') return true;
   const perms={
-    approve_transaction:['treasurer','supervisor'],
-    approve_reimbursement:['treasurer','supervisor'],
-    view_all:['treasurer','supervisor'],
-    manage_members:['treasurer'],
-    manage_admins:[], // only admin (handled above)
-    view_reports:['treasurer'],
+    approve_transaction:['treasurer','supervisor','president'],
+    approve_reimbursement:['treasurer','supervisor','president'],
+    view_all:['treasurer','supervisor','president'],
+    manage_members:['treasurer','president'],
+    manage_admins:[],
+    view_reports:['treasurer','president'],
   };
   return (perms[action]||[]).includes(r);
 }
@@ -977,6 +978,7 @@ function setupSidebar(){
   const bMap={
     admin:'badge-admin 👑 Admin',
     treasurer:'badge-treasurer 🏛 Treasurer',
+    president:'badge-president 🎖 President',
     supervisor:'badge-supervisor 🔍 Supervisor',
     member:'badge-member 👤 Member'
   };
@@ -1666,6 +1668,7 @@ function getFilteredMembers(){
   const committee=cdVal('mb-committee')||'';
   const sort=cdVal('mb-sort')||'alpha-asc';
   let users=DATA.users.filter(u=>u.role!=='admin'||(currentUser.role==='admin'&&u.id!==currentUser.id));
+  if(currentUser.role!=='admin') users=users.filter(u=>u.role!=='admin');
   if(role) users=users.filter(u=>u.role===role);
   if(committee) users=users.filter(u=>u.committee===committee);
   if(search) users=users.filter(u=>
@@ -1702,6 +1705,7 @@ function memberRowHtml(m){
   const roleBadge={
     admin:'badge-admin 👑 Admin',
     treasurer:'badge-treasurer 🏛 Treasurer',
+    president:'badge-president 🎖 President',
     supervisor:'badge-supervisor 🔍 Supervisor',
     member:'badge-member 👤 Member'
   };
@@ -1750,6 +1754,7 @@ function renderMembers(){
   document.getElementById('cd-mb-role-wrap')?.replaceWith(cdCreate('mb-role',[
     {value:'',label:'All Roles'},
     {value:'treasurer',label:'🏛 Treasurers'},
+    {value:'president',label:'🎖 Presidents'},
     {value:'supervisor',label:'🔍 Supervisors'},
     {value:'member',label:'👤 Members'},
   ],()=>filterMembers(),''));
@@ -1820,6 +1825,7 @@ function openEditMember(id){
         <select id="em-role" onchange="toggleEmCommittee(this.value)" ${!can('manage_members')&&currentUser.role!=='admin'?'disabled style="opacity:.5"':''}>
           <option value="member" ${m.role==='member'?'selected':''}>👤 Member</option>
           <option value="supervisor" ${m.role==='supervisor'?'selected':''}>🔍 Supervisor</option>
+          <option value="president" ${m.role==='president'?'selected':''}>🎖 President</option>
           <option value="treasurer" ${m.role==='treasurer'?'selected':''}>🏛 Treasurer</option>
           ${currentUser.role==='admin'?`<option value="admin" ${m.role==='admin'?'selected':''}>👑 Admin</option>`:''}
         </select>
@@ -2942,12 +2948,14 @@ function renderAdminPanel(){
   const allUsers=DATA.users.filter(u=>u.id!==currentUser.id);
   const admins=allUsers.filter(u=>u.role==='admin');
   const treasurers=allUsers.filter(u=>u.role==='treasurer');
+  const presidents=allUsers.filter(u=>u.role==='president');
   const supervisors=allUsers.filter(u=>u.role==='supervisor');
   const members=allUsers.filter(u=>u.role==='member');
   const avatarColors=['#c9a84c','#4f9cf9','#3ecf8e','#f5a623','#e05252','#a78bfa','#f472b6','#2dd4bf'];
   const roleGroups=[
     {label:'👑 Admins',badge:'badge-admin',users:admins},
     {label:'🏛 Treasurers',badge:'badge-treasurer',users:treasurers},
+    {label:'🎖 Presidents',badge:'badge-president',users:presidents},
     {label:'🔍 Supervisors',badge:'badge-supervisor',users:supervisors},
     {label:'👤 Members',badge:'badge-member',users:members},
   ];
@@ -2958,6 +2966,7 @@ function renderAdminPanel(){
       <div class="stat-value" style="color:#a78bfa">${admins.length+1}</div><div class="stat-sub">including you</div>
     </div>
     <div class="stat-card gold"><div class="stat-icon">🏛</div><div class="stat-label">Treasurers</div><div class="stat-value gold">${treasurers.length}</div></div>
+    <div class="stat-card" style="border-color:rgba(251,113,133,.3)"><div class="stat-icon">🎖</div><div class="stat-label">Presidents</div><div class="stat-value" style="color:var(--rose)">${presidents.length}</div></div>
     <div class="stat-card blue"><div class="stat-icon">🔍</div><div class="stat-label">Supervisors</div><div class="stat-value blue">${supervisors.length}</div></div>
     <div class="stat-card green"><div class="stat-icon">👤</div><div class="stat-label">Members</div><div class="stat-value green">${members.length}</div></div>
   </div>
@@ -2994,20 +3003,20 @@ function renderAdminPanel(){
   <div class="card">
     <div class="card-title"><span>📋</span> Role Permissions</div>
     <div class="table-wrap"><table>
-      <thead><tr><th>Permission</th><th style="color:#a78bfa">👑 Admin</th><th style="color:var(--gold)">🏛 Treasurer</th><th style="color:var(--blue)">🔍 Supervisor</th><th style="color:var(--green)">👤 Member</th></tr></thead>
+      <thead><tr><th>Permission</th><th style="color:#a78bfa">👑 Admin</th><th style="color:var(--gold)">🏛 Treasurer</th><th style="color:var(--rose)">🎖 President</th><th style="color:var(--blue)">🔍 Supervisor</th><th style="color:var(--green)">👤 Member</th></tr></thead>
       <tbody>${[
-        ['View all committees','✓','✓','✓','Own only'],
-        ['Approve transactions','✓','✓','✓','✗'],
-        ['Approve reimbursements','✓','✓','✓','✗'],
-        ['Log transactions directly','✓','✓','✓','✗'],
-        ['Manage members','✓','✓','✗','✗'],
-        ['Manage committees','✓','✓','✗','✗'],
-        ['Cash Counter & Wave','✓','✓','✓','✗'],
-        ['Assign Treasurer role','✓','✗','✗','✗'],
-        ['Admin Panel','✓','✗','✗','✗'],
+        ['View all committees','✓','✓','✓','✓','Own only'],
+        ['Approve transactions','✓','✓','✓','✓','✗'],
+        ['Approve reimbursements','✓','✓','✓','✓','✗'],
+        ['Log transactions directly','✓','✓','✓','✓','✗'],
+        ['Manage members','✓','✓','✓','✗','✗'],
+        ['Manage committees','✓','✓','✓','✗','✗'],
+        ['Cash Counter & Wave','✓','✓','✓','✓','✗'],
+        ['Assign Treasurer role','✓','✗','✗','✗','✗'],
+        ['Admin Panel','✓','✗','✗','✗','✗'],
       ].map(([perm,...vals])=>`<tr>
         <td style="font-weight:500">${perm}</td>
-        ${vals.map((v,i)=>`<td style="color:${v==='✓'?['#a78bfa','var(--gold)','var(--blue)','var(--green)'][i]:v==='✗'?'var(--red)':'var(--muted)'};font-weight:${v==='✓'||v==='✗'?'700':'400'}">${v}</td>`).join('')}
+        ${vals.map((v,i)=>`<td style="color:${v==='✓'?['#a78bfa','var(--gold)','var(--rose)','var(--blue)','var(--green)'][i]:v==='✗'?'var(--red)':'var(--muted)'};font-weight:${v==='✓'||v==='✗'?'700':'400'}">${v}</td>`).join('')}
       </tr>`).join('')}</tbody>
     </table></div>
   </div>`;
@@ -3026,6 +3035,7 @@ function openAddAdminUser(){
         <select id="nm-role" onchange="toggleCommitteeField(this.value)">
           <option value="member">👤 Member</option>
           <option value="supervisor">🔍 Supervisor</option>
+          <option value="president">🎖 President</option>
           <option value="treasurer">🏛 Treasurer</option>
           <option value="admin">👑 Admin</option>
         </select>
